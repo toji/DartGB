@@ -1,4 +1,4 @@
-import 'dart:typeddata';
+part of dartgb;
 
 class Memory {
   _mem = new Uint8List(0x10000);
