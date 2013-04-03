@@ -3,6 +3,7 @@ library dartgb;
 import 'dart:async';
 import 'dart:html';
 import 'package:web_ui/web_ui.dart';
+import 'lcd.dart';
 
 part 'cpu.dart';
 part 'gameboy.dart';
@@ -24,4 +25,6 @@ void main() {
   var gameboy = new Gameboy('tetris.rom', false);
   // Enable this to use Shadow DOM in the browser.
   //useShadowDom = true;
+  CanvasElement canvas = query("#lcd");
+  LCD lcd = new LCD(canvas);
 }
