@@ -15,10 +15,6 @@ class Gameboy {
     run();
   }
 
-  void loadROM(String filename) {
-    // TODO
-  }
-
   void run() {
     if (!paused)
       return;
