@@ -6,13 +6,10 @@ class Gameboy {
         frames = 0,
         paused = true,
         endFrame = true {
+    cpu = new CPU(memory);
     lcd = new LCD(canvas);
-    loadROM('roms/$filename');
+    rom = new ROM(filename);
     run();
-  }
-
-  void loadROM(String filename) {
-    // TODO
   }
 
   void run() {
@@ -65,7 +62,8 @@ class Gameboy {
   Memory memory = new Memory();
   LCD lcd = null;
   Interrupts interrupts = new Interrupts();
-  CPU cpu = new CPU();
+  CPU cpu = null;
+  ROM rom = null;
   Input input = new Input();
   Timers timers = new Timers();
 
