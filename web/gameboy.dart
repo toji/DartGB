@@ -1,18 +1,17 @@
 part of dartgb;
 
 class Gameboy {
-  Gameboy(String filename, bool startRunning)
+  Gameboy(String filename)
       : seconds = 0,
-        frames = 0 {
+        frames = 0,
+        paused = true,
+        endFrame = true {
     loadROM('roms/$filename');
-    if (startRunning)
-      run();
-    else
-      pause();
+    run();
   }
 
   void loadROM(String filename) {
-
+    // TODO
   }
 
   void run() {
@@ -34,7 +33,7 @@ class Gameboy {
     // TODO: set 'status' in web page to paused
   }
 
-  void frame() {
+  void frame(Timer t) {
     endFrame = false;
     while (!(endFrame || paused)) {
       cpu.nextOp();
@@ -44,7 +43,7 @@ class Gameboy {
     }
   }
 
-  void showFPS() {
+  void showFPS(Timer t) {
     // TODO
     // frames += FPS;
     ++seconds;
@@ -69,6 +68,6 @@ class Gameboy {
   Input input = new Input();
   Timers timers = new Timers();
 
-  Timer runTimer;
-  Timer fpsTimer;
+  Timer runTimer = null;
+  Timer fpsTimer = null;
 }

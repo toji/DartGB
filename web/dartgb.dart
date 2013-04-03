@@ -21,7 +21,7 @@ int startingCount = 5;
  * http://www.dartlang.org/articles/dart-web-components/.
  */
 void main() {
-  var gameboy = new Gameboy('tetris.rom', false);
+  var gameboy = new Gameboy('tetris.rom');
   // Enable this to use Shadow DOM in the browser.
   //useShadowDom = true;
 }
