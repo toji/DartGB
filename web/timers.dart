@@ -1,3 +1,7 @@
-class Timers {
+part of dartgb;
 
+class Timers {
+  void control() {
+    // TODO
+  }
 }
