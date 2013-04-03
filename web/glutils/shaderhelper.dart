@@ -9,8 +9,10 @@ class ShaderHelper {
   
   ShaderHelper(GL.RenderingContext this.gl, String vs, String fs) {
     program = _buildProgram(vs, fs);
-    attributes = _queryAttributes(program);
-    uniforms = _queryUniforms(program);
+    if(program != null) {
+      attributes = _queryAttributes(program);
+      uniforms = _queryUniforms(program);
+    }
   }
   
   GL.Program _buildProgram(String vs, String fs) {
