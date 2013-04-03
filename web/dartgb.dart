@@ -3,6 +3,7 @@ library dartgb;
 import 'dart:async';
 import 'dart:html';
 import 'package:web_ui/web_ui.dart';
+import "dart:web_gl" as GL;
 
 part 'cpu.dart';
 part 'gameboy.dart';
@@ -21,7 +22,7 @@ int startingCount = 5;
  * http://www.dartlang.org/articles/dart-web-components/.
  */
 void main() {
-  var gameboy = new Gameboy('tetris.rom', false);
+  var gameboy = new Gameboy('tetris.rom', query("#lcd"), false);
   // Enable this to use Shadow DOM in the browser.
   //useShadowDom = true;
 }
