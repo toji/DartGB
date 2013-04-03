@@ -30,7 +30,8 @@ class Memory {
   bool backgroundUpdated = false;
   // 384 accessible tiles.
   List<bool> updatedTiles = new List<bool>(384);
-  List<bool> updatedBackground = new List<bool>(384);
+  // Two 32x32 maps = 2048 tile indexes. 
+  List<bool> updatedBackground = new List<bool>(2048);
   
   Memory(ROM rom) {
     _mem.setRange(0, rom.data.length, rom.data);
@@ -156,12 +157,14 @@ class Memory {
     else if (_mem[addr] != val) {
       // 8000-97FF: Tile data.
       if (addr < 0x9800) {
-        // TODO: Update tiles.
         _mem[addr] = val;
+        tilesUpdated = true;
+        updatedTiles[(addr - 0x8000) >> 4] = true;
       // 9800-9FFF: Tile maps.
       } else if (addr < 0xA000) {
-        // TODO: Update background tile maps.
         _mem[addr] = val;
+        backgroundUpdated = true;
+        updatedBackground[addr - 0x9800] = true;
       // A000-BFFF: Switchable RAM.
       } else if (addr < 0xC000) {
         _mem[addr] = val;
