@@ -25,12 +25,15 @@ class Memory {
   
   List<int> BackPal = new List<int>(4);
   List<List<int>> SpritePal = [new List<int>(4), new List<int>(4)];
-    
-  Memory() {
-    Init();
-  }
   
-  void Init() {
+  bool tilesUpdated = false;
+  bool backgroundUpdated = false;
+  // 384 accessible tiles.
+  List<bool> updatedTiles = new List<bool>(384);
+  List<bool> updatedBackground = new List<bool>(384);
+  
+  Memory(ROM rom) {
+    _mem.setRange(0, rom.data.length, rom.data);
     W(0xFF00, 0xFF); // P1
     W(0xFF04, 0xAF); // DIV
     W(0xFF05, 0x00); // TIMA

@@ -4,6 +4,7 @@ class LCD {
   // Technically gl should have a _ in front, but I don't want to type that over and over again. :P
   GL.RenderingContext gl;
   CanvasElement _canvas;
+  Memory memory;
   
   GL.Texture _frontBuffer;
   GL.Buffer _quadBuffer;
@@ -33,7 +34,7 @@ class LCD {
     }
   """;
   
-  LCD(CanvasElement this._canvas) {
+  LCD(CanvasElement this._canvas, Memory this.memory) {
     gl = _canvas.getContext3d(alpha: true, depth: false, antialias: false, preserveDrawingBuffer: true);
     gl.clearColor(0.0, 0.0, 1.0, 1.0);
     gl.clear(GL.COLOR_BUFFER_BIT);

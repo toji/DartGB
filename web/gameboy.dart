@@ -1,13 +1,17 @@
 part of dartgb;
 
 class Gameboy {
+  ROM rom;
+  Memory memory;
+  
   Gameboy(String filename, CanvasElement canvas)
       : seconds = 0,
         frames = 0,
         paused = true,
         endFrame = true {
-    lcd = new LCD(canvas);
-    loadROM('roms/$filename');
+    rom = new ROM('roms/$filename');
+    memory = new Memory(rom);
+    lcd = new LCD(canvas, memory);
     run();
   }
 
