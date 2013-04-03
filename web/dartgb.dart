@@ -3,8 +3,9 @@ library dartgb;
 import 'dart:typeddata';
 import 'dart:async';
 import 'dart:html';
-import 'package:web_ui/web_ui.dart';
+import 'dart:typeddata';
 import "dart:web_gl" as GL;
+import 'package:web_ui/web_ui.dart';
 
 part 'cpu.dart';
 part 'gameboy.dart';
