@@ -55,7 +55,7 @@ class Gameboy {
   void frame(Timer t) {
     endFrame = false;
     while (!(endFrame || paused)) {
-      cpu.nextOp();
+      cpu.next();
       interrupts.run();
       timers.control();
       // debugger.checkBreakpoint();
