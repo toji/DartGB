@@ -3,3 +3,4 @@ pubspec.lock
 web/out/
 packages/
 .DS_Store
+out/

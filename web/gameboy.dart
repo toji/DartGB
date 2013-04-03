@@ -14,7 +14,7 @@ class Gameboy {
   ROM rom = null;
   Memory memory = null;
   Interrupts interrupts = new Interrupts();
-  CPU cpu = new CPU();
+  CPU cpu = null;
   Input input = new Input();
   Timers timers = new Timers();
 
@@ -28,6 +28,7 @@ class Gameboy {
         endFrame = true {
     rom = new ROM('roms/$filename');
     memory = new Memory(rom);
+    cpu = new CPU(memory);
     lcd = new LCD(canvas, memory);
     run();
   }
