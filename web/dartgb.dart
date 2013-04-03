@@ -3,9 +3,9 @@ library dartgb;
 import 'dart:typeddata';
 import 'dart:async';
 import 'dart:html';
-import 'dart:typeddata';
-import "dart:web_gl" as GL;
+import 'dart:web_gl' as GL;
 import 'package:web_ui/web_ui.dart';
+import 'glutils/glutils.dart';
 
 part 'cpu.dart';
 part 'gameboy.dart';
@@ -24,6 +24,6 @@ int startingCount = 5;
  * http://www.dartlang.org/articles/dart-web-components/.
  */
 void main() {
-  CanvasElement canvas = query("#lcd");
+  CanvasElement canvas = query('#lcd');
   var gameboy = new Gameboy('tetris.rom', canvas);
 }
