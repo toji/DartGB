@@ -14,10 +14,10 @@ class CPU {
     if (halt)
       ticks = 4;
     else {
-      var pc = reg['pc'];
+      var pc = r['pc'];
       var opCode = memory.R(pc);
       op[opCode]();
-      reg['pc'] = ++pc;
+      r['pc'] = ++pc;
     }
   }
 
@@ -27,70 +27,70 @@ class CPU {
   }
 
   int RL(var n) {
-    reg['t1'] = reg['fc'];
-    reg['fc'] = (n >> 7) & 1;
-    n = ((n << 1) & 0xff) | reg['t1'];
-    reg['fn'] = reg['fh'] = 0;
-    reg['fz'] = (n == 0 ? 1 : 0);
+    var t1 = r['fc'];
+    r['fc'] = (n >> 7) & 1;
+    n = ((n << 1) & 0xff) | t1;
+    r['fn'] = r['fh'] = 0;
+    r['fz'] = (n == 0 ? 1 : 0);
     ticks = 8;
     return n;
   }
 
   int RLC(var n) {
-    reg['fc'] = (n >> 7) & 1;
-    n = ((n << 1) & 0xff) | reg['fc'];
-    reg['fn'] = reg['fh'] = 0;
-    reg['fz'] = (n == 0 ? 1 : 0);
+    r['fc'] = (n >> 7) & 1;
+    n = ((n << 1) & 0xff) | r['fc'];
+    r['fn'] = r['fh'] = 0;
+    r['fz'] = (n == 0 ? 1 : 0);
     ticks = 8;
     return n;
   }
 
   int RR(var n) {
-    reg['t1'] = reg['fc'];
-    reg['fc'] = n & 1;
-    n = (n >> 1) | (reg['t1'] << 7);
-    reg['fn'] = reg['fh'] = 0;
-    reg['fz'] = (n == 0 ? 1 : 0);
+    var t1 = r['fc'];
+    r['fc'] = n & 1;
+    n = (n >> 1) | (t1 << 7);
+    r['fn'] = r['fh'] = 0;
+    r['fz'] = (n == 0 ? 1 : 0);
     ticks = 8;
     return n;
   }
 
   int RRC(var n) {
-    reg['fc'] = n & 1;
-    n = (n >> 1) | (reg['fc'] << 7);
-    reg['fn'] = reg['fh'] = 0;
-    reg['fz'] = (n == 0 ? 1 : 0);
+    r['fc'] = n & 1;
+    n = (n >> 1) | (r['fc'] << 7);
+    r['fn'] = r['fh'] = 0;
+    r['fz'] = (n == 0 ? 1 : 0);
     ticks = 8;
     return n;
   }
 
-  void swap(String r) {
-    if (r == 'h') {
-      var hl = reg['hl'];
-      reg['hl'] = ((hl & 0x0F00) << 4) | ((hl & 0xF000) >> 4) | (hl & 0x00FF);
-    } else if (r == 'l') {
-      var hl = reg['hl'];
-      reg['hl'] = ((hl & 0x000F) << 4) | ((hl & 0x00F0) >> 4) | (hl & 0xFF00);
-    } else if (r == 'hl') {
-      var hl = reg['hl'];
-      reg['t1'] = memory.R(reg['hl']);
-      memory.W(reg['hl'], ((reg['t1']<<4)|(reg['t1']>>4)) & 0xFF);
+  void swap(String reg) {
+    if (reg == 'h') {
+      var hl = r['hl'];
+      r['hl'] = ((hl & 0x0F00) << 4) | ((hl & 0xF000) >> 4) | (hl & 0x00FF);
+    } else if (reg == 'l') {
+      var hl = r['hl'];
+      r['hl'] = ((hl & 0x000F) << 4) | ((hl & 0x00F0) >> 4) | (hl & 0xFF00);
+    } else if (reg == 'hl') {
+      var hl = r['hl'];
+      var t1 = memory.R(r['hl']);
+      memory.W(r['hl'], ((t1<<4)|(t1>>4)) & 0xFF);
     } else {
-      var r = reg[r];
-      reg[r] = ((r<<4) | (r>>4)) & 0xFF;
+      var r = r[reg];
+      r[reg] = ((r<<4) | (r>>4)) & 0xFF;
     }
     ticks = 8;
   }
 
-  void SLA_R(String r, int t) {
-    reg['fc'] = (reg[r] >> 7) & 1;
-    reg[r] = (reg[r] << 1) & 0xFF;
-    reg['fn'] = reg['fh'] = 0;
-    reg['fz'] = (reg[r] == 0 ? 1 : 0);
+  void SLA_R(String reg, int t) {
+    r['fc'] = (r[reg] >> 7) & 1;
+    r[reg] = (r[reg] << 1) & 0xFF;
+    r['fn'] = r['fh'] = 0;
+    r['fz'] = (r[reg] == 0 ? 1 : 0);
     ticks = t;
   }
  
-  Map<String, int> reg = {
+  Map<String, int> r = {
     'ra': 0x01,
     'fz': 0x01,  // bit 7 - zero
     'fn': 0x00,  // bit 6 - sub
@@ -103,8 +103,6 @@ class CPU {
     'hl': 0x014D,
     'sp': 0xFFFE,  // stack pointer
     'pc': 0x0100,  // program counter
-    't1': 0x00,  // temp register
-    't2': 0x00,  // temp register
   };
   
   Memory memory = null;
@@ -380,346 +378,1095 @@ class CPU {
     // NOP
     op[0x00] = () { ticks = 0; };
     // LD BC, u16
+    op[0x01] = () {
+        r['rc'] = memory.R(r['pc']++);
+        r['rb'] = memory.R(r['pc']++);
+        ticks = 12;
+    };
     // LD (BC), A
+    op[0x02] = () {
+        memory.W((r['rb'] << 8) | r['rc'], r['ra']);
+        ticks = 8;
+    };
     // INC BC
+    op[0x03] = () {
+        r['t1'] = INC16((r['rb'] << 8) | r['rc']);
+        r['rb'] = r['t1'] >> 8;
+        r['rc'] = r['t1'] & 0xFF;
+    };
     // INC B
+    op[0x04] = () { INC('rb', 4); };
     // DEC B
+    op[0x05] = () { DEC('rb', 4); };
     // LD B, u8
+    op[0x06] = () { r['rb'] = memory.R(r['pc']++); ticks = 8; };
     // RLCA
+    op[0x07] = () {
+        r['fc'] = (r['ra'] >> 7) & 1;
+        r['ra'] = (r['ra'] << 1) & 0xFF | r['fc'];
+        r['fn'] = r['fh'] = 0;
+        r['fz'] = r['ra'] == 0 ? 1 : 0;
+        ticks = 4;
+    };
     // LD (u16), SP
+    op[0x08] = () { LD_MEM_R16('hl', 20); };
     // ADD HL, BC
+    op[0x09] = () {
+        r['hl'] = ADD16(r['hl'], (r['rb'] << 8) | r['rc']); ticks = 8;
+    };
     // LD A,(BC)
+    op[0x0A] = () {
+
+    };
     // DEC BC
+    op[0x0B] = () {
+
+    };
     // INC C
+    op[0x0C] = () {
+
+    };
     // DEC C
+    op[0x0D] = () {
+
+    };
     // LD C,u8
+    op[0x0E] = () {
+
+    };
     // RRCA
+    op[0x0F] = () {
+
+    };
     // STOP
+    op[0x10] = () {
+
+    };
     // LD DE,u16
+    op[0x11] = () {
+
+    };
     // LD (DE), A
+    op[0x12] = () {
+
+    };
     // INC DE
+    op[0x13] = () {
+
+    };
     // INC D
+    op[0x14] = () {
+
+    };
     // DEC D
+    op[0x15] = () {
+
+    };
     // LD D,u8
+    op[0x16] = () {
+
+    };
     // RLA
+    op[0x17] = () {
+
+    };
     // JR s8
+    op[0x18] = () {
+
+    };
     // ADD HL,DE
+    op[0x19] = () {
+
+    };
     // LD A,(DE)
+    op[0x1A] = () {
+
+    };
     // DEC DE
+    op[0x1B] = () {
+
+    };
     // INC E
+    op[0x1C] = () {
+
+    };
     // DEC E
+    op[0x1D] = () {
+
+    };
     // LD E,u8
+    op[0x1E] = () {
+
+    };
     // RRA
+    op[0x1F] = () {
+
+    };
     // JR NZ,s8
+    op[0x20] = () {
+
+    };
     // LD HL,u16
+    op[0x21] = () {
+
+    };
     // LDI (HL),A
+    op[0x22] = () {
+
+    };
     // INC HL
+    op[0x23] = () {
+
+    };
     // INC H
+    op[0x24] = () {
+
+    };
     // DEC H
+    op[0x25] = () {
+
+    };
     // LD H,u8
+    op[0x26] = () {
+
+    };
     // DAA
+    op[0x27] = () {
+
+    };
     // JR Z,s8
+    op[0x28] = () {
+
+    };
     // ADD HL,HL
+    op[0x29] = () {
+
+    };
     // LDI A,(HL)
+    op[0x2A] = () {
+
+    };
     // DEC HL
+    op[0x2B] = () {
+
+    };
     // INC L
+    op[0x2C] = () {
+
+    };
     // DEC L
+    op[0x2D] = () {
+
+    };
     // LD L,u8
+    op[0x2E] = () {
+
+    };
     // CPL
+    op[0x2F] = () {
+
+    };
     // JR NC,s8
+    op[0x30] = () {
+
+    };
     // LD SP,u16
+    op[0x31] = () {
+
+    };
     // LDD (HL),A
+    op[0x32] = () {
+
+    };
     // INC SP
+    op[0x33] = () {
+
+    };
     // INC (HL)
+    op[0x34] = () {
+
+    };
     // DEC (HL)
+    op[0x35] = () {
+
+    };
     // LD (HL),u8
+    op[0x36] = () {
+
+    };
     // SCF
+    op[0x37] = () {
+
+    };
     // JR C,s8
+    op[0x38] = () {
+
+    };
     // ADD HL,SP
+    op[0x39] = () {
+
+    };
     // LDD A,(HL)
+    op[0x3A] = () {
+
+    };
     // DEC SP
+    op[0x3B] = () {
+
+    };
     // INC A
+    op[0x3C] = () {
+
+    };
     // DEC A
+    op[0x3D] = () {
+
+    };
     // LD A,u8
+    op[0x3E] = () {
+
+    };
     // CCF
+    op[0x3F] = () {
+
+    };
     // LD B,B
+    op[0x40] = () {
+
+    };
     // LD B,C
+    op[0x41] = () {
+
+    };
     // LD B,D
+    op[0x42] = () {
+
+    };
     // LD B,E
+    op[0x43] = () {
+
+    };
     // LD B,H
+    op[0x44] = () {
+
+    };
     // LD B,L
+    op[0x45] = () {
+
+    };
     // LD B,(HL)
+    op[0x46] = () {
+
+    };
     // LD B,A
+    op[0x47] = () {
+
+    };
     // LD C,B
+    op[0x48] = () {
+
+    };
     // LD C,C
+    op[0x49] = () {
+
+    };
     // LD C,D
+    op[0x4A] = () {
+
+    };
     // LD C,E
+    op[0x4B] = () {
+
+    };
     // LD C,H
+    op[0x4C] = () {
+
+    };
     // LD C,L
+    op[0x4D] = () {
+
+    };
     // LD C,(HL)
+    op[0x4E] = () {
+
+    };
     // LD C,A
+    op[0x4F] = () {
+
+    };
     // LD D,B
+    op[0x50] = () {
+
+    };
     // LD D,C
+    op[0x51] = () {
+
+    };
     // LD D,D
+    op[0x52] = () {
+
+    };
     // LD D,E
+    op[0x53] = () {
+
+    };
     // LD D,H
+    op[0x54] = () {
+
+    };
     // LD D,L
+    op[0x55] = () {
+
+    };
     // LD D,(HL)
+    op[0x56] = () {
+
+    };
     // LD D,A
+    op[0x57] = () {
+
+    };
     // LD E,B
+    op[0x58] = () {
+
+    };
     // LD E,C
+    op[0x59] = () {
+
+    };
     // LD E,D
+    op[0x5A] = () {
+
+    };
     // LD E,E
+    op[0x5B] = () {
+
+    };
     // LD E,H
+    op[0x5C] = () {
+
+    };
     // LD E,L
+    op[0x5D] = () {
+
+    };
     // LD E,(HL)
+    op[0x5E] = () {
+
+    };
     // LD E,A
+    op[0x5F] = () {
+
+    };
     // LD H,B
+    op[0x60] = () {
+
+    };
     // LD H,C
+    op[0x61] = () {
+
+    };
     // LD H,D
+    op[0x62] = () {
+
+    };
     // LD H,E
+    op[0x63] = () {
+
+    };
     // LD H,H
+    op[0x64] = () {
+
+    };
     // LD H,L
+    op[0x65] = () {
+
+    };
     // LD H,(HL)
+    op[0x66] = () {
+
+    };
     // LD H,A
+    op[0x67] = () {
+
+    };
     // LD L,B
+    op[0x68] = () {
+
+    };
     // LD L,C
+    op[0x69] = () {
+
+    };
     // LD L,D
+    op[0x6A] = () {
+
+    };
     // LD L,E
+    op[0x6B] = () {
+
+    };
     // LD L,H
+    op[0x6C] = () {
+
+    };
     // LD L,L
+    op[0x6D] = () {
+
+    };
     // LD L,(HL)
+    op[0x6E] = () {
+
+    };
     // LD L,A
+    op[0x6F] = () {
+
+    };
     // LD (HL), B
+    op[0x70] = () {
+
+    };
     // LD (HL), C
+    op[0x71] = () {
+
+    };
     // LD (HL), D
+    op[0x72] = () {
+
+    };
     // LD (HL), E
+    op[0x73] = () {
+
+    };
     // LD (HL), H
+    op[0x74] = () {
+
+    };
     // LD (HL), L
+    op[0x75] = () {
+
+    };
     // HALT
+    op[0x76] = () {
+
+    };
     // LD (HL), A
+    op[0x77] = () {
+
+    };
     // LD A,B
+    op[0x7A] = () {
+
+    };
     // LD A,C
+    op[0x78] = () {
+
+    };
     // LD A,D
+    op[0x79] = () {
+
+    };
     // LD A,E
+    op[0x7A] = () {
+
+    };
     // LD A,H
+    op[0x7B] = () {
+
+    };
     // LD A,L
+    op[0x7C] = () {
+
+    };
     // LD A,(HL)
+    op[0x7D] = () {
+
+    };
     // LD A, A
+    op[0x7E] = () {
+
+    };
     // ADD A,B
+    op[0x7F] = () {
+
+    };
     // ADD A,C
+    op[0x80] = () {
+
+    };
     // ADD A,D
+    op[0x81] = () {
+
+    };
     // ADD A,E
+    op[0x82] = () {
+
+    };
     // ADD A,H
+    op[0x83] = () {
+
+    };
     // ADD A,L
+    op[0x84] = () {
+
+    };
     // ADD A,(HL)
+    op[0x85] = () {
+
+    };
     // ADD A,A
+    op[0x86] = () {
+
+    };
     // ADC A,A
+    op[0x87] = () {
+
+    };
     // ADC A,B
+    op[0x88] = () {
+
+    };
     // ADC A,C
+    op[0x89] = () {
+
+    };
     // ADC A,D
+    op[0x8A] = () {
+
+    };
     // ADC A,E
+    op[0x8B] = () {
+
+    };
     // ADC A,H
+    op[0x8C] = () {
+
+    };
     // ADC A,L
+    op[0x8D] = () {
+
+    };
     // ADC A,(HL)
+    op[0x8E] = () {
+
+    };
     // ADC A,A
+    op[0x8F] = () {
+
+    };
     // SUB B
+    op[0x90] = () {
+
+    };
     // SUB C
+    op[0x91] = () {
+
+    };
     // SUB D
+    op[0x92] = () {
+
+    };
     // SUB E
+    op[0x93] = () {
+
+    };
     // SUB H
+    op[0x94] = () {
+
+    };
     // SUB L
+    op[0x95] = () {
+
+    };
     // SUB (HL)
+    op[0x96] = () {
+
+    };
     // SUB A
+    op[0x97] = () {
+
+    };
     // SBC A,B
+    op[0x98] = () {
+
+    };
     // SBC A,C
+    op[0x99] = () {
+
+    };
     // SBC A,D
+    op[0x9A] = () {
+
+    };
     // SBC A,E
+    op[0x9B] = () {
+
+    };
     // SBC A,H
+    op[0x9C] = () {
+
+    };
     // SBC A,L
+    op[0x9D] = () {
+
+    };
     // SBC A,(HL)
+    op[0x9E] = () {
+
+    };
     // SBC A,A
+    op[0x9F] = () {
+
+    };
     // AND B
+    op[0xA0] = () {
+
+    };
     // AND C
+    op[0xA1] = () {
+
+    };
     // AND D
+    op[0xA2] = () {
+
+    };
     // AND E
+    op[0xA3] = () {
+
+    };
     // AND H
+    op[0xA4] = () {
+
+    };
     // AND L
+    op[0xA5] = () {
+
+    };
     // AND (HL)
+    op[0xA6] = () {
+
+    };
     // AND A
+    op[0xA7] = () {
+
+    };
     // XOR B
+    op[0xA8] = () {
+
+    };
     // XOR C
+    op[0xA9] = () {
+
+    };
     // XOR D
+    op[0xAA] = () {
+
+    };
     // XOR E
+    op[0xAB] = () {
+
+    };
     // XOR H
+    op[0xAC] = () {
+
+    };
     // XOR L
+    op[0xAD] = () {
+
+    };
     // XOR (HL)
+    op[0xAE] = () {
+
+    };
     // XOR A
+    op[0xAF] = () {
+
+    };
     // OR B
+    op[0xB0] = () {
+
+    };
     // OR C
+    op[0xB1] = () {
+
+    };
     // OR D
+    op[0xB2] = () {
+
+    };
     // OR E
+    op[0xB3] = () {
+
+    };
     // OR H
+    op[0xB4] = () {
+
+    };
     // OR L
+    op[0xB5] = () {
+
+    };
     // OR (HL)
+    op[0xB6] = () {
+
+    };
     // OR A
+    op[0xB7] = () {
+
+    };
     // CP B
+    op[0xB8] = () {
+
+    };
     // CP C
+    op[0xB9] = () {
+
+    };
     // CP D
+    op[0xBA] = () {
+
+    };
     // CP E
+    op[0xBB] = () {
+
+    };
     // CP H
+    op[0xBC] = () {
+
+    };
     // CP L
+    op[0xBD] = () {
+
+    };
     // CP (HL)
+    op[0xBE] = () {
+
+    };
     // CP A
+    op[0xBF] = () {
+
+    };
     // RET NZ
+    op[0xC0] = () {
+
+    };
     // POP BC
+    op[0xC1] = () {
+
+    };
     // JP NZ,u16
+    op[0xC2] = () {
+
+    };
     // JP u16
+    op[0xC3] = () {
+
+    };
     // CALL NZ,u16
+    op[0xC4] = () {
+
+    };
     // PUSH BC
+    op[0xC5] = () {
+
+    };
     // ADD A,u8
-    // RST 0x00
+    op[0xC6] = () {
+
+    };
+    // RST 0xC0
+    op[0xC7] = () {
+
+    };
     // RET Z
+    op[0xC8] = () {
+
+    };
     // RET
+    op[0xC9] = () {
+
+    };
     // JP Z,u16
+    op[0xCA] = () {
+
+    };
     // CB
+    op[0xCB] = () {
+
+    };
     // CALL Z,u16
+    op[0xCC] = () {
+
+    };
     // CALL u16
+    op[0xCD] = () {
+
+    };
     // ADC A,u8
-    // RST 0x08
+    op[0xCE] = () {
+
+    };
+    // RST 0xC8
+    op[0xCF] = () {
+
+    };
     // RET NC
+    op[0xD0] = () {
+
+    };
     // POP DE
+    op[0xD1] = () {
+
+    };
     // JP NC,u16
+    op[0xD2] = () {
+
+    };
     // UNKNOWN
+    op[0xD3] = unknown;
     // CALL NC,u16
+    op[0xD4] = () {
+
+    };
     // PUSH DE
+    op[0xD5] = () {
+
+    };
     // SUB u8
+    op[0xD6] = () {
+
+    };
     // RST 0x10
+    op[0xD7] = () {
+
+    };
     // RET C
+    op[0xD8] = () {
+
+    };
     // RETI
+    op[0xD9] = () {
+
+    };
     // JP C,u16
+    op[0xDA] = () {
+
+    };
     // UNKNOWN
+    op[0xDB] = unknown;
     // CALL C,u16
+    op[0xDC] = () {
+
+    };
     // UNKNOWN
+    op[0xDD] = unknown;
     // SBC A,u8
+    op[0xDE] = () {
+
+    };
     // RST 0x18
+    op[0xDF] = () {
+
+    };
     // LD (0xFF00+u8),A
+    op[0xE0] = () {
+
+    };
     // POP HL
+    op[0xE1] = () {
+
+    };
     // LD (0xFF00+C),A
+    op[0xE2] = () {
+
+    };
     // UNKNOWN
+    op[0xE3] = unknown;
     // UNKNOWN
+    op[0xE4] = unknown;
     // PUSH HL
+    op[0xE5] = () {
+
+    };
     // AND u8
+    op[0xE6] = () {
+
+    };
     // RST 0x20
+    op[0xE7] = () {
+
+    };
     // ADD SP,u8
+    op[0xE8] = () {
+
+    };
     // JP (HL)
+    op[0xE9] = () {
+
+    };
     // LD (u16),A
+    op[0xEA] = () {
+
+    };
     // UNKNOWN
+    op[0xEB] = unknown;
     // UNKNOWN
+    op[0xEC] = unknown;
     // UNKNOWN
+    op[0xED] = () {
+
+    };
     // XOR u8
+    op[0xEE] = () {
+
+    };
     // RST 0x28
+    op[0xEF] = () {
+
+    };
     // LD A,(0xFF00+u8)
+    op[0xF0] = () {
+
+    };
     // POP AF
+    op[0xF1] = () {
+
+    };
     // LD A,(0xFF00+C)
+    op[0xF2] = () {
+
+    };
     // DI
+    op[0xF3] = () {
+
+    };
     // UNKNOWN
+    op[0xF4] = unknown;
     // PUSH AF
+    op[0xF5] = () {
+
+    };
     // OR u8
+    op[0xF6] = () {
+
+    };
     // RST 0x30
+    op[0xF7] = () {
+
+    };
     // LD HL,SP+u8
+    op[0xF8] = () {
+
+    };
     // LD SP,HL
+    op[0xF9] = () {
+
+    };
     // LD A,(u16)
+    op[0xFA] = () {
+
+    };
     // EI
+    op[0xFB] = () {
+
+    };
     // UNKNOWN
+    op[0xFC] = unknown;
     // UNKNOWN
+    op[0xFD] = unknown;
     // CP u8
+    op[0xFE] = () {
+
+    };
     // RST 0x38
+    op[0xFF] = () {
+
+    };
   }
     
   List<OpFunc> opcb = new List<OpFunc>(255);
 
   void buildOpCodeCBs() {
-    opcb[0x00] = () { reg['rb'] = RLC(reg['rb']); };
-    opcb[0x01] = () { reg['rc'] = RLC(reg['rc']); };
-    opcb[0x02] = () { reg['rd'] = RLC(reg['rd']); };
-    opcb[0x03] = () { reg['re'] = RLC(reg['re']); };
-    opcb[0x04] = () { reg['hl'] = (reg['hl'] & 0x00FF) | (RLC(reg['hl'] >> 8) << 8); };
-    opcb[0x05] = () { reg['hl'] = (reg['hl'] & 0xFF00) | RLC(reg['hl'] & 0xFF); };
-    opcb[0x06] = () { memory.W(reg['hl'], RLC(memory.R(reg['hl']))); ticks += 8; };
-    opcb[0x07] = () { reg['ra'] = RLC(reg['ra']); };
-    opcb[0x08] = () { reg['rb'] = RRC(reg['rb']); };
-    opcb[0x09] = () { reg['rc'] = RRC(reg['rc']); };
-    opcb[0x0A] = () { reg['rd'] = RRC(reg['rd']); };
-    opcb[0x0B] = () { reg['re'] = RRC(reg['re']); };
-    opcb[0x0C] = () { reg['hl'] = (reg['hl'] & 0x00FF) | (RRC(reg['hl'] >> 8) << 8); };
-    opcb[0x0D] = () { reg['hl'] = (reg['hl'] & 0xFF00) | RRC(reg['hl'] & 0xFF); };
-    opcb[0x0E] = () { memory.W(reg['hl'], RRC(memory.R(reg['hl']))); ticks += 8; };
-    opcb[0x0F] = () { reg['ra'] = RRC(reg['ra']); };
-    opcb[0x10] = () { reg['rb'] = RL(reg['rb']); };
-    opcb[0x11] = () { reg['rc'] = RL(reg['rc']); };
-    opcb[0x12] = () { reg['rd'] = RL(reg['rd']); };
-    opcb[0x13] = () { reg['re'] = RL(reg['re']); };
-    opcb[0x14] = () { reg['hl'] = (reg['hl'] & 0x00FF) | (RL(reg['hl'] >> 8) << 8); };
-    opcb[0x15] = () { reg['hl'] = (reg['hl'] & 0xFF00) | RL(reg['hl'] & 0xFF); };
-    opcb[0x16] = () { memory.W(reg['hl'], RL(memory.R(reg['hl']))); ticks += 8; };
-    opcb[0x17] = () { reg['ra'] = RL(reg['ra']); };
-    opcb[0x18] = () { reg['rb'] = RR(reg['rb']); };
-    opcb[0x19] = () { reg['rc'] = RR(reg['rc']); };
-    opcb[0x1A] = () { reg['rd'] = RR(reg['rd']); };
-    opcb[0x1B] = () { reg['re'] = RR(reg['re']); };
-    opcb[0x1C] = () { reg['hl'] = (reg['hl'] & 0x00FF) | (RR(reg['hl'] >> 8) << 8); };
-    opcb[0x1D] = () { reg['hl'] = (reg['hl'] & 0xFF00) | RR(reg['hl'] & 0xFF); };
-    opcb[0x1E] = () { memory.W(reg['hl'], RR(memory.R(reg['hl']))); ticks += 8; };
-    opcb[0x1F] = () { reg['ra'] = RR(reg['ra']); };
-    opcb[0x20] = () { SLA_R(reg['rb'], 8); };
-    opcb[0x21] = () { SLA_R(reg['rc'], 8); };
-    opcb[0x22] = () { SLA_R(reg['rd'], 8); };
-    opcb[0x23] = () { SLA_R(reg['re'], 8); };
-    opcb[0x24] = () { reg['t1'] = reg['hl'] >> 8; SLA_R('t1', 8); reg['hl'] = (reg['t1'] << 8) | (reg['hl'] & 0x00FF); };
-    opcb[0x25] = () { reg['t1'] = reg['hl'] & 0xFF; SLA_R('t1', 8); reg['hl'] = (reg['hl'] & 0xFF00) | reg['t1']; };
-    opcb[0x26] = () { reg['t1'] = memory.R(reg['hl']); SLA_R('t1', 16); memory.W(reg['hl'], reg['t1']); };
-    opcb[0x27] = () { SLA_R(reg['ra'], 8); };
+    opcb[0x00] = () { r['rb'] = RLC(r['rb']); };
+    opcb[0x01] = () { r['rc'] = RLC(r['rc']); };
+    opcb[0x02] = () { r['rd'] = RLC(r['rd']); };
+    opcb[0x03] = () { r['re'] = RLC(r['re']); };
+    opcb[0x04] = () { r['hl'] = (r['hl'] & 0x00FF) | (RLC(r['hl'] >> 8) << 8); };
+    opcb[0x05] = () { r['hl'] = (r['hl'] & 0xFF00) | RLC(r['hl'] & 0xFF); };
+    opcb[0x06] = () { memory.W(r['hl'], RLC(memory.R(r['hl']))); ticks += 8; };
+    opcb[0x07] = () { r['ra'] = RLC(r['ra']); };
+    opcb[0x08] = () { r['rb'] = RRC(r['rb']); };
+    opcb[0x09] = () { r['rc'] = RRC(r['rc']); };
+    opcb[0x0A] = () { r['rd'] = RRC(r['rd']); };
+    opcb[0x0B] = () { r['re'] = RRC(r['re']); };
+    opcb[0x0C] = () { r['hl'] = (r['hl'] & 0x00FF) | (RRC(r['hl'] >> 8) << 8); };
+    opcb[0x0D] = () { r['hl'] = (r['hl'] & 0xFF00) | RRC(r['hl'] & 0xFF); };
+    opcb[0x0E] = () { memory.W(r['hl'], RRC(memory.R(r['hl']))); ticks += 8; };
+    opcb[0x0F] = () { r['ra'] = RRC(r['ra']); };
+    opcb[0x10] = () { r['rb'] = RL(r['rb']); };
+    opcb[0x11] = () { r['rc'] = RL(r['rc']); };
+    opcb[0x12] = () { r['rd'] = RL(r['rd']); };
+    opcb[0x13] = () { r['re'] = RL(r['re']); };
+    opcb[0x14] = () { r['hl'] = (r['hl'] & 0x00FF) | (RL(r['hl'] >> 8) << 8); };
+    opcb[0x15] = () { r['hl'] = (r['hl'] & 0xFF00) | RL(r['hl'] & 0xFF); };
+    opcb[0x16] = () { memory.W(r['hl'], RL(memory.R(r['hl']))); ticks += 8; };
+    opcb[0x17] = () { r['ra'] = RL(r['ra']); };
+    opcb[0x18] = () { r['rb'] = RR(r['rb']); };
+    opcb[0x19] = () { r['rc'] = RR(r['rc']); };
+    opcb[0x1A] = () { r['rd'] = RR(r['rd']); };
+    opcb[0x1B] = () { r['re'] = RR(r['re']); };
+    opcb[0x1C] = () { r['hl'] = (r['hl'] & 0x00FF) | (RR(r['hl'] >> 8) << 8); };
+    opcb[0x1D] = () { r['hl'] = (r['hl'] & 0xFF00) | RR(r['hl'] & 0xFF); };
+    opcb[0x1E] = () { memory.W(r['hl'], RR(memory.R(r['hl']))); ticks += 8; };
+    opcb[0x1F] = () { r['ra'] = RR(r['ra']); };
+    opcb[0x20] = () { SLA_R(r['rb'], 8); };
+    opcb[0x21] = () { SLA_R(r['rc'], 8); };
+    opcb[0x22] = () { SLA_R(r['rd'], 8); };
+    opcb[0x23] = () { SLA_R(r['re'], 8); };
+    opcb[0x24] = () { var t1 = r['hl'] >> 8; SLA_R('t1', 8); r['hl'] = (t1 << 8) | (r['hl'] & 0x00FF); };
+    opcb[0x25] = () { var t1 = r['hl'] & 0xFF; SLA_R('t1', 8); r['hl'] = (r['hl'] & 0xFF00) | t1; };
+    opcb[0x26] = () { var t1 = memory.R(r['hl']); SLA_R('t1', 16); memory.W(r['hl'], t1); };
+    opcb[0x27] = () { SLA_R(r['ra'], 8); };
     opcb[0x28] = () {
-      reg['fc'] = reg['rb'] & 1; reg['rb'] = (reg['rb'] >> 1) | (reg['rb'] & 0x80);
-      reg['fn'] = 0; reg['fh'] = 0; reg['fz'] = (reg['rb'] == 0 ? 1 : 0);
+      r['fc'] = r['rb'] & 1; r['rb'] = (r['rb'] >> 1) | (r['rb'] & 0x80);
+      r['fn'] = 0; r['fh'] = 0; r['fz'] = (r['rb'] == 0 ? 1 : 0);
       ticks = 8;
     };
     opcb[0x29] = () {
-      reg['fc'] = reg['rc'] & 1; reg['rc'] = (reg['rc'] >> 1) | (reg['rc'] & 0x80);
-      reg['fn'] = 0; reg['fh'] = 0; reg['fz'] = (reg['rc'] == 0 ? 1 : 0);
+      r['fc'] = r['rc'] & 1; r['rc'] = (r['rc'] >> 1) | (r['rc'] & 0x80);
+      r['fn'] = 0; r['fh'] = 0; r['fz'] = (r['rc'] == 0 ? 1 : 0);
       ticks = 8;
     };
     opcb[0x2A] = () {
-      reg['fc'] = reg['rd'] & 1; reg['rd'] = (reg['rd'] >> 1) | (reg['rd'] & 0x80);
-      reg['fn'] = 0; reg['fh'] = 0; reg['fz'] = (reg['rd'] == 0 ? 1 : 0);
+      r['fc'] = r['rd'] & 1; r['rd'] = (r['rd'] >> 1) | (r['rd'] & 0x80);
+      r['fn'] = 0; r['fh'] = 0; r['fz'] = (r['rd'] == 0 ? 1 : 0);
       ticks = 8;
     };
     opcb[0x2B] = () {
-      reg['fc'] = reg['re'] & 1; reg['re'] = (reg['re'] >> 1) | (reg['re'] & 0x80);
-      reg['fn'] = 0; reg['fh'] = 0;
-      reg['fz'] = (reg['re'] == 0 ? 1 : 0);
+      r['fc'] = r['re'] & 1; r['re'] = (r['re'] >> 1) | (r['re'] & 0x80);
+      r['fn'] = 0; r['fh'] = 0;
+      r['fz'] = (r['re'] == 0 ? 1 : 0);
       ticks = 8;
     };
     opcb[0x2C] = () {
-      var h = reg['hl'] >> 8; reg['fc'] = h & 1; h = (h >> 1) | (h & 0x80);
-      reg['fn'] = 0; reg['fh'] = 0; reg['fz'] = (h == 0 ? 1 : 0);
-      reg['hl'] = (h << 8) | (reg['hl'] & 0x00ff);
+      var h = r['hl'] >> 8; r['fc'] = h & 1; h = (h >> 1) | (h & 0x80);
+      r['fn'] = 0; r['fh'] = 0; r['fz'] = (h == 0 ? 1 : 0);
+      r['hl'] = (h << 8) | (r['hl'] & 0x00ff);
       ticks = 8; };
     opcb[0x2D] = () {
-      var l = reg['hl'] & 0xFF; reg['fc'] = l & 1; l = (l >> 1) | (l & 0x80);
-      reg['fn'] = 0; reg['fh'] = 0; reg['fz'] = (l == 0 ? 1 : 0);
-      reg['hl'] = (reg['hl'] & 0xFF00) | l;
+      var l = r['hl'] & 0xFF; r['fc'] = l & 1; l = (l >> 1) | (l & 0x80);
+      r['fn'] = 0; r['fh'] = 0; r['fz'] = (l == 0 ? 1 : 0);
+      r['hl'] = (r['hl'] & 0xFF00) | l;
       ticks = 8; };
     opcb[0x2E] = () {
-      var m = memory.R(reg['hl']); reg['fc'] = m & 1; m = (m >> 1) | (m & 0x80);
-      reg['fn'] = 0; reg['fh'] = 0;
-      reg['fz'] = (m == 0 ? 1 : 0);
-      memory.W(reg['hl'], m);
+      var m = memory.R(r['hl']); r['fc'] = m & 1; m = (m >> 1) | (m & 0x80);
+      r['fn'] = 0; r['fh'] = 0;
+      r['fz'] = (m == 0 ? 1 : 0);
+      memory.W(r['hl'], m);
       ticks = 16; };
     opcb[0x2F] = () {
-      reg['fc'] = reg['ra'] & 1; reg['ra'] = (reg['ra'] >> 1) | (reg['ra'] & 0x80);
-      reg['fn'] = 0; reg['fh'] = 0; reg['fz'] = (reg['ra'] == 0 ? 1 : 0);
+      r['fc'] = r['ra'] & 1; r['ra'] = (r['ra'] >> 1) | (r['ra'] & 0x80);
+      r['fn'] = 0; r['fh'] = 0; r['fz'] = (r['ra'] == 0 ? 1 : 0);
       ticks = 8; };
     opcb[0x30] = () { swap('rb'); };
     opcb[0x31] = () { swap('rc'); };
@@ -729,25 +1476,26 @@ class CPU {
     opcb[0x35] = () { swap('l'); };
     opcb[0x36] = () { swap('hl'); };
     opcb[0x37] = () { swap('ra'); };
-    opcb[0x38] = () { reg['fc'] = reg['rb'] & 1; reg['rb'] = reg['rb'] >> 1; reg['fn'] = 0; reg['fh'] = 0; reg['fz'] = (reg['rb'] == 0 ? 1 : 0); ticks = 8; };
-    opcb[0x39] = () { reg['fc'] = reg['rc'] & 1; reg['rc'] = reg['rc'] >> 1; reg['fn'] = 0; reg['fh'] = 0; reg['fz'] = (reg['rc'] == 0 ? 1 : 0); ticks = 8; };
-    opcb[0x3A] = () { reg['fc'] = reg['rd'] & 1; reg['rd'] = reg['rd'] >> 1; reg['fn'] = 0; reg['fh'] = 0; reg['fz'] = (reg['rd'] == 0 ? 1 : 0); ticks = 8; };
-    opcb[0x3B] = () { reg['fc'] = reg['re'] & 1; reg['re'] = reg['re'] >> 1; reg['fn'] = 0; reg['fh'] = 0; reg['fz'] = (reg['re'] == 0 ? 1 : 0); ticks = 8; };
-    opcb[0x3C] = () { var h = reg['hl'] >> 8; reg['fc'] = h & 1; h = h >> 1; reg['fn'] = 0; reg['fh'] = 0; reg['fz'] = (h == 0 ? 1 : 0);
-                     reg['hl'] = (h << 8) | (reg['hl'] & 0x00FF); ticks = 8; };
-    opcb[0x3D] = () { var l = reg['hl'] & 0xFF; reg['fc'] = l & 1; l = l >> 1; reg['fn'] = 0; reg['fh'] = 0; reg['fz'] = (l == 0 ? 1 : 0); reg['hl'] = (reg['hl'] & 0xFF00) | l; ticks = 8; };
-    opcb[0x3E] = () { var m = memory.R(reg['hl']); reg['fc'] = m & 1; m = m >> 1; reg['fn'] = 0; reg['fh'] = 0; reg['fz'] = (m == 0 ? 1 : 0); memory.W(reg['hl'], m); ticks = 16; };
-    opcb[0x3F] = () { reg['fc'] = reg['ra'] & 1; reg['ra'] = reg['ra'] >> 1;
-      reg['fn'] = 0; reg['fh'] = 0; reg['fz'] = (reg['ra'] == 0 ? 1 : 0); ticks
+    opcb[0x38] = () { r['fc'] = r['rb'] & 1; r['rb'] = r['rb'] >> 1; r['fn'] = 0; r['fh'] = 0; r['fz'] = (r['rb'] == 0 ? 1 : 0); ticks = 8; };
+    opcb[0x39] = () { r['fc'] = r['rc'] & 1; r['rc'] = r['rc'] >> 1; r['fn'] = 0; r['fh'] = 0; r['fz'] = (r['rc'] == 0 ? 1 : 0); ticks = 8; };
+    opcb[0x3A] = () { r['fc'] = r['rd'] & 1; r['rd'] = r['rd'] >> 1; r['fn'] = 0; r['fh'] = 0; r['fz'] = (r['rd'] == 0 ? 1 : 0); ticks = 8; };
+    opcb[0x3B] = () { r['fc'] = r['re'] & 1; r['re'] = r['re'] >> 1; r['fn'] = 0; r['fh'] = 0; r['fz'] = (r['re'] == 0 ? 1 : 0); ticks = 8; };
+    opcb[0x3C] = () { var h = r['hl'] >> 8; r['fc'] = h & 1; h = h >> 1; r['fn'] = 0; r['fh'] = 0; r['fz'] = (h == 0 ? 1 : 0);
+                     r['hl'] = (h << 8) | (r['hl'] & 0x00FF); ticks = 8; };
+    opcb[0x3D] = () { var l = r['hl'] & 0xFF; r['fc'] = l & 1; l = l >> 1; r['fn'] = 0; r['fh'] = 0; r['fz'] = (l == 0 ? 1 : 0); r['hl'] = (r['hl'] & 0xFF00) | l; ticks = 8; };
+    opcb[0x3E] = () { var m = memory.R(r['hl']); r['fc'] = m & 1; m = m >> 1; r['fn'] = 0; r['fh'] = 0; r['fz'] = (m == 0 ? 1 : 0); memory.W(r['hl'], m); ticks = 16; };
+    opcb[0x3F] = () { r['fc'] = r['ra'] & 1; r['ra'] = r['ra'] >> 1;
+      r['fn'] = 0; r['fh'] = 0; r['fz'] = (r['ra'] == 0 ? 1 : 0); ticks
         = 8; };
 
     for (var i = 0; i < 8; ++i) {
       var o = (1 << 6) | (i << 3);
       opcb[o|7] = () {
-          reg['fz'] = (reg['ra'] & (1 << i)) == 0 ? 1 : 0;
-          reg['fn'] = 0;
-          reg['fh'] = 1;
+          r['fz'] = (r['ra'] & (1 << i)) == 0 ? 1 : 0;
+          r['fn'] = 0;
+          r['fh'] = 1;
           ticks = 8;
+          // TODO: So many more here.
       };
     }
   }
