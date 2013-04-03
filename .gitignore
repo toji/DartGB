@@ -1,6 +1,6 @@
 pubspec.lock
 .buildlog
 web/out/
-packages/
+packages
 .DS_Store
 out/

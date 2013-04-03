@@ -3,7 +3,9 @@ part of dartgb;
 class Interrupts {
   void run() {
     // TODO
-    //if (ime)
+    //if (enabled)
     //  interrupt[regIE & regIF]();
   }
+
+  bool enabled;
 }
