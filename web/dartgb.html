@@ -3,19 +3,47 @@
 <html>
   <head>
     <meta charset="utf-8">
-    <title>Sample app</title>
+    <title>Gameboy!</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
     <link rel="stylesheet" href="dartgb.css">
     
     <!-- import the click-counter -->
     <link rel="components" href="xclickcounter.html">
   </head>
   <body>
-    <h1>DartGB</h1>
-    
-    <p>Hello world from Dart!</p>
-    
-    <div id="sample_container_id">
-      <div is="x-click-counter" id="click_counter" count="{{startingCount}}"></div>
+    <div class="case">
+      <div class="screen-border">
+        <h2 class="screen-header">DOT MATRIX WITH STEREO SOUND</h2>
+        <h3 class="battery-indicator">BATTERY</h3>
+        <div class="screen">
+          <canvas id="lcd"></canvas>
+        </div>
+      </div>
+      
+      <h1 class="main-title">
+        <span class="sm">Nintendo</span>
+        <span class="lg">GAME BOY</span>
+        <span class="tm">TM</span>
+      </h1>
+      
+      <div class="controls">
+        <div class="dpad">
+          <b id="up"></b>
+          <b id="down"></b>
+          <b id="left"></b>
+          <b id="right"></b>
+        </div>
+
+        <div class="face-buttons">
+          <b id="B"></b>
+          <b id="A"></b>
+        </div>
+
+        <div class="system-buttons">
+          <b id="select"></b>
+          <b id="start"></b>
+        </div>
+      </div>
     </div>
 
     <script type="application/dart" src="dartgb.dart"></script>
