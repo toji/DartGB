@@ -1,8 +1,25 @@
 part of dartgb;
 
 class Gameboy {
-  ROM rom;
-  Memory memory;
+  bool paused = false;
+  bool endFrame;
+
+  int seconds;
+  int frames;
+
+  int bankSwitchCount = 0;
+  
+  //Debugger debugger;
+  LCD lcd = null;  
+  ROM rom = null;
+  Memory memory = null;
+  Interrupts interrupts = new Interrupts();
+  CPU cpu = new CPU();
+  Input input = new Input();
+  Timers timers = new Timers();
+
+  Timer runTimer = null;
+  Timer fpsTimer = null;
   
   Gameboy(String filename, CanvasElement canvas)
       : seconds = 0,
@@ -52,23 +69,4 @@ class Gameboy {
     // FPS = 0;
     bankSwitchCount = 0;
   }
-
-  bool paused = false;
-  bool endFrame;
-
-  int seconds;
-  int frames;
-
-  int bankSwitchCount = 0;
-  
-  //Debugger debugger;
-  Memory memory = new Memory();
-  LCD lcd = null;
-  Interrupts interrupts = new Interrupts();
-  CPU cpu = new CPU();
-  Input input = new Input();
-  Timers timers = new Timers();
-
-  Timer runTimer = null;
-  Timer fpsTimer = null;
 }
