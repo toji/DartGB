@@ -1,11 +1,12 @@
 part of dartgb;
 
 class Gameboy {
-  Gameboy(String filename)
+  Gameboy(String filename, CanvasElement canvas)
       : seconds = 0,
         frames = 0,
         paused = true,
         endFrame = true {
+    lcd = new LCD(canvas);
     loadROM('roms/$filename');
     run();
   }
@@ -52,7 +53,7 @@ class Gameboy {
     bankSwitchCount = 0;
   }
 
-  bool paused;
+  bool paused = false;
   bool endFrame;
 
   int seconds;
@@ -62,7 +63,7 @@ class Gameboy {
   
   //Debugger debugger;
   Memory memory = new Memory();
-  LCD lcd = new LCD();
+  LCD lcd = null;
   Interrupts interrupts = new Interrupts();
   CPU cpu = new CPU();
   Input input = new Input();
