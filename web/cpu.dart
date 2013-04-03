@@ -51,6 +51,8 @@ class CPU {
     // TODO: report error
     assert(false);
   }
+  
+  void NOP() => ticks = 0;
 
   int RL(var n) {
     r['t1'] = r['fc'];
@@ -498,7 +500,7 @@ class CPU {
   
   void buildOpCodes() {
     // NOP
-    op[0x00] = () { ticks = 0; };
+    op[0x00] = NOP;
     // LD BC, u16
     op[0x01] = () {
         r['c'] = mem.R(r['pc']++);
@@ -732,300 +734,174 @@ class CPU {
     };
     // LD (HL),u8
     op[0x36] = () {
-
+      mem.W(r['hl'], mem.R(r['pc']++));
+      ticks = 12;
     };
     // SCF
     op[0x37] = () {
-
+        r['fc'] = 1;
+        r['fn'] = 0;
+        r['fh'] = 0;
+        ticks = 4;
     };
     // JR C,s8
-    op[0x38] = () {
-
-    };
+    op[0x38] = () { JR(r['fc'] == 1); };
     // ADD HL,SP
-    op[0x39] = () {
-
-    };
+    op[0x39] = () { r['hl'] = ADD16(r['hl'], r['sp']); };
     // LDD A,(HL)
     op[0x3A] = () {
-
+        r['a'] = mem.R(r['hl']);
+        r['hl'] = (r['hl'] - 1) & 0xFFFF;
+        ticks = 8;
     };
     // DEC SP
     op[0x3B] = () {
-
+      r['sp'] = (r['sp'] - 1) & 0xFFFF;
+      ticks = 8;
     };
     // INC A
-    op[0x3C] = () {
-
-    };
+    op[0x3C] = () { INC('a', 4); };
     // DEC A
-    op[0x3D] = () {
-
-    };
+    op[0x3D] = () { DEC('a', 4); };
     // LD A,u8
     op[0x3E] = () {
-
+        r['a'] = mem.R(r['pc']++);
+        ticks = 8;
     };
     // CCF
     op[0x3F] = () {
-
+      r['fc'] = (~r['fc']) & 1;
+      r['fn'] = r['fh'] = 0;
+      ticks = 4;
     };
     // LD B,B
-    op[0x40] = () {
-
-    };
+    op[0x40] = NOP;
     // LD B,C
-    op[0x41] = () {
-
-    };
+    op[0x41] = () { r['b'] = r['c']; ticks = 4; };
     // LD B,D
-    op[0x42] = () {
-
-    };
+    op[0x42] = () { r['b'] = r['d']; ticks = 4; };
     // LD B,E
-    op[0x43] = () {
-
-    };
+    op[0x43] = () { r['b'] = r['e']; ticks = 4; };
     // LD B,H
-    op[0x44] = () {
-
-    };
+    op[0x44] = () { r['b'] = r['hl'] >> 8; ticks = 4; };
     // LD B,L
-    op[0x45] = () {
-
-    };
+    op[0x45] = () { r['b'] = r['hl'] & 0xFF; ticks = 4; };
     // LD B,(HL)
-    op[0x46] = () {
-
-    };
+    op[0x46] = () { r['b'] = mem.R(r['hl']); ticks = 8; };
     // LD B,A
-    op[0x47] = () {
-
-    };
+    op[0x47] = () { r['b'] = r['a']; ticks = 4; };
     // LD C,B
-    op[0x48] = () {
-
-    };
+    op[0x48] = () { r['c'] = r['b']; ticks = 4; };
     // LD C,C
-    op[0x49] = () {
-
-    };
+    op[0x49] = NOP;
     // LD C,D
-    op[0x4A] = () {
-
-    };
+    op[0x4A] = () { r['c'] = r['d']; ticks = 4; };
     // LD C,E
-    op[0x4B] = () {
-
-    };
+    op[0x4B] = () { r['c'] = r['e']; ticks = 4; };
     // LD C,H
-    op[0x4C] = () {
-
-    };
+    op[0x4C] = () { r['c'] = r['hl'] >> 8; ticks = 4; };
     // LD C,L
-    op[0x4D] = () {
-
-    };
+    op[0x4D] = () { r['c'] = r['hl'] & 0xFF; ticks = 4; };
     // LD C,(HL)
-    op[0x4E] = () {
-
-    };
+    op[0x4E] = () { r['c'] = mem.R(r['hl']); ticks = 8; };
     // LD C,A
-    op[0x4F] = () {
-
-    };
+    op[0x4F] = () { r['c'] = r['a']; ticks = 4; };
     // LD D,B
-    op[0x50] = () {
-
-    };
+    op[0x50] = () { r['d'] = r['b']; ticks = 4; };
     // LD D,C
-    op[0x51] = () {
-
-    };
+    op[0x51] = () { r['d'] = r['c']; ticks = 4; };
     // LD D,D
-    op[0x52] = () {
-
-    };
+    op[0x52] = NOP;
     // LD D,E
-    op[0x53] = () {
-
-    };
+    op[0x53] = () { r['d'] = r['e']; ticks = 4; };
     // LD D,H
-    op[0x54] = () {
-
-    };
+    op[0x54] = () { r['d'] = r['hl'] >> 8; ticks = 4; };
     // LD D,L
-    op[0x55] = () {
-
-    };
+    op[0x55] = () { r['d'] = r['hl'] & 0xFF; ticks = 4; };
     // LD D,(HL)
-    op[0x56] = () {
-
-    };
+    op[0x56] = () { r['d'] = mem.R(r['hl']); ticks = 8; };
     // LD D,A
-    op[0x57] = () {
-
-    };
+    op[0x57] = () { r['d'] = r['a']; ticks = 4; };
     // LD E,B
-    op[0x58] = () {
-
-    };
+    op[0x58] = () { r['e'] = r['b']; ticks = 4; };
     // LD E,C
-    op[0x59] = () {
-
-    };
+    op[0x59] = () { r['e'] = r['c']; ticks = 4; };
     // LD E,D
-    op[0x5A] = () {
-
-    };
+    op[0x5A] = () { r['e'] = r['d']; ticks = 4; };
     // LD E,E
-    op[0x5B] = () {
-
-    };
+    op[0x5B] = NOP;
     // LD E,H
-    op[0x5C] = () {
-
-    };
+    op[0x5C] = () { r['e'] = r['hl'] >> 8; ticks = 4; };
     // LD E,L
-    op[0x5D] = () {
-
-    };
+    op[0x5D] = () { r['e'] = r['hl'] & 0xFF; ticks = 4; };
     // LD E,(HL)
-    op[0x5E] = () {
-
-    };
+    op[0x5E] = () { r['e'] = mem.R(r['hl']); ticks = 8; };
     // LD E,A
-    op[0x5F] = () {
-
-    };
+    op[0x5F] = () { r['e'] = r['a']; ticks = 4; };
     // LD H,B
-    op[0x60] = () {
-
-    };
+    op[0x60] = () { r['hl'] = (r['hl']&0x00FF)|(r['b']<<8); ticks = 4; };
     // LD H,C
-    op[0x61] = () {
-
-    };
+    op[0x61] = () { r['hl'] = (r['hl']&0x00FF)|(r['c']<<8); ticks = 4; };
     // LD H,D
-    op[0x62] = () {
-
-    };
+    op[0x62] = () { r['hl'] = (r['hl']&0x00FF)|(r['d']<<8); ticks = 4; };
     // LD H,E
-    op[0x63] = () {
-
-    };
+    op[0x63] = () { r['hl'] = (r['hl']&0x00FF)|(r['e']<<8); ticks = 4; };
     // LD H,H
-    op[0x64] = () {
-
-    };
+    op[0x64] = NOP;
     // LD H,L
-    op[0x65] = () {
-
-    };
+    op[0x65] = () { r['hl'] = (r['hl']&0x00FF)|((r['hl']&0xFF)<<8); ticks = 4; };
     // LD H,(HL)
-    op[0x66] = () {
-
-    };
+    op[0x66] = () { r['hl'] = (r['hl']&0x00FF)|(mem.R(r['hl'])<<8); ticks = 8; };
     // LD H,A
-    op[0x67] = () {
-
-    };
+    op[0x67] = () { r['hl'] = (r['hl']&0x00FF)|(r['a']<<8); ticks = 4; };
     // LD L,B
-    op[0x68] = () {
-
-    };
+    op[0x68] = () { r['hl'] = (r['hl']&0xFF00)|r['b']; ticks = 4; };
     // LD L,C
-    op[0x69] = () {
-
-    };
+    op[0x69] = () { r['hl'] = (r['hl']&0xFF00)|r['c']; ticks = 4; };
     // LD L,D
-    op[0x6A] = () {
-
-    };
+    op[0x6A] = () { r['hl'] = (r['hl']&0xFF00)|r['d']; ticks = 4; };
     // LD L,E
-    op[0x6B] = () {
-
-    };
+    op[0x6B] = () { r['hl'] = (r['hl']&0xFF00)|r['e']; ticks = 4; };
     // LD L,H
-    op[0x6C] = () {
-
-    };
+    op[0x6C] = () { r['hl'] = (r['hl']&0xFF00)|(r['hl']>>8); ticks = 4; };
     // LD L,L
-    op[0x6D] = () {
-
-    };
+    op[0x6D] = NOP;
     // LD L,(HL)
-    op[0x6E] = () {
-
-    };
+    op[0x6E] = () { r['hl'] = (r['hl']&0xFF00)|(mem.R(r['hl'])); ticks = 8; };
     // LD L,A
-    op[0x6F] = () {
-
-    };
+    op[0x6F] = () { r['hl'] = (r['hl']&0xFF00)|r['a']; ticks = 4; };
     // LD (HL), B
-    op[0x70] = () {
-
-    };
+    op[0x70] = () { mem.W(r['hl'], r['b']); ticks = 8; };
     // LD (HL), C
-    op[0x71] = () {
-
-    };
+    op[0x71] = () { mem.W(r['hl'], r['c']); ticks = 8; };
     // LD (HL), D
-    op[0x72] = () {
-
-    };
+    op[0x72] = () { mem.W(r['hl'], r['d']); ticks = 8; };
     // LD (HL), E
-    op[0x73] = () {
-
-    };
+    op[0x73] = () { mem.W(r['hl'], r['e']); ticks = 8; };
     // LD (HL), H
-    op[0x74] = () {
-
-    };
+    op[0x74] = () { mem.W(r['hl'], r['hl'] >> 8); ticks = 8; };
     // LD (HL), L
-    op[0x75] = () {
-
-    };
+    op[0x75] = () { mem.W(r['hl'], r['hl'] & 0x00FF); ticks = 8; };
     // HALT
-    op[0x76] = () {
-
-    };
+    op[0x76] = HALT;
     // LD (HL), A
-    op[0x77] = () {
-
-    };
+    op[0x77] = () { mem.W(r['hl'], r['a']); ticks = 8; }
     // LD A,B
-    op[0x7A] = () {
-
-    };
+    op[0x7A] = () { r['a'] = r['b']; ticks = 4; };
     // LD A,C
-    op[0x78] = () {
-
-    };
+    op[0x78] = () { r['a'] = r['c']; ticks = 4; };
     // LD A,D
-    op[0x79] = () {
-
-    };
+    op[0x79] = () { r['a'] = r['d']; ticks = 4; };
     // LD A,E
-    op[0x7A] = () {
-
-    };
+    op[0x7A] = () { r['a'] = r['e']; ticks = 4; };
     // LD A,H
-    op[0x7B] = () {
-
-    };
+    op[0x7B] = () { r['a'] = r['hl'] >> 8; ticks = 4; };
     // LD A,L
-    op[0x7C] = () {
-
-    };
+    op[0x7C] = () { r['a'] = r['hl'] & 0x00FF; ticks = 4; };
     // LD A,(HL)
-    op[0x7D] = () {
-
-    };
+    op[0x7D] = () { r['a'] = mem.R(r['hl']); ticks = 8; };
     // LD A, A
-    op[0x7E] = () {
-
-    };
+    op[0x7E] = NOP;
     // ADD A,B
     op[0x7F] = () {
 
