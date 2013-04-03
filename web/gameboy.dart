@@ -6,9 +6,10 @@ class Gameboy {
         frames = 0,
         paused = true,
         endFrame = true {
+    rom = new ROM('roms/$filename');
+    memory = new Memory(rom);
     cpu = new CPU(memory);
-    lcd = new LCD(canvas);
-    rom = new ROM(filename);
+    lcd = new LCD(canvas, memory);
     run();
   }
 
