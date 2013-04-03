@@ -47,7 +47,6 @@ class LCD {
     gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MIN_FILTER, GL.NEAREST);
     gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MAG_FILTER, GL.NEAREST);
     
-    
     _blitProgram = new ShaderHelper(gl, _blitVS, _blitFS);
     
     _quadBuffer = gl.createBuffer();

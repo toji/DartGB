@@ -4,8 +4,13 @@ class ShaderHelper {
   GL.RenderingContext gl;
   GL.Program program;
   
+  Map<String, int> attributes;
+  Map<String, Object> uniforms;
+  
   ShaderHelper(GL.RenderingContext this.gl, String vs, String fs) {
     program = _buildProgram(vs, fs);
+    attributes = _queryAttributes(program);
+    uniforms = _queryUniforms(program);
   }
   
   GL.Program _buildProgram(String vs, String fs) {
@@ -52,6 +57,26 @@ class ShaderHelper {
     }
     
     return shader;
+  }
+  
+  Map<String, int> _queryAttributes(GL.Program program) {
+    int count = gl.getProgramParameter(program, GL.ACTIVE_ATTRIBUTES);
+    Map<String, int> attributes = new Map<String, int>();
+    for (int i = 0; i < count; i++) {
+      GL.ActiveInfo info = gl.getActiveAttrib(program, i);
+      attributes[info.name] = gl.getAttribLocation(program, info.name);
+    }
+    return attributes;
+  }
+  
+  Map<String, Object> _queryUniforms(GL.Program program) {
+    int count = gl.getProgramParameter(program, GL.ACTIVE_UNIFORMS);
+    Map<String, Object> uniforms = new Map<String, Object>();
+    for (int i = 0; i < count; i++) {
+      GL.ActiveInfo info = gl.getActiveUniform(program, i);
+      String name = info.name.replaceAll("[0]", "");
+      uniforms[name] = gl.getUniformLocation(program, name);
+    }
   }
 }
 
