@@ -91,6 +91,7 @@ class Memory {
           _mem[addr] = val;
           // TODO: timer on = val & 4
           // TODO: timer frequency = val & 3
+          return;
         case 0x0F:
           // Interrupt flags.
           _mem[addr] = val & 31;
