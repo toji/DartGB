@@ -16,6 +16,7 @@ part 'lcd.dart';
 part 'memory.dart';
 part 'rom.dart';
 part 'timers.dart';
+part 'util.dart';
 
 // initial value for click-counter
 int startingCount = 5;
