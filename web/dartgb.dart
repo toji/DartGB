@@ -3,6 +3,7 @@ library dartgb;
 import 'dart:typeddata';
 import 'dart:async';
 import 'dart:html';
+import 'dart:math';
 import 'dart:web_gl' as GL;
 import 'package:web_ui/web_ui.dart';
 import 'glutils/glutils.dart';
