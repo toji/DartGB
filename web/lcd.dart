@@ -76,7 +76,7 @@ class LCD {
   // 0xFF44  Current scan line Read only
   // 0xFF47  Background palette  Write only
 
-  Uint8Array _scanline = new Uint8Array(256 * 2);
+  Uint8Array _scanline = new Uint8Array(512);
   void renderScan() {
     int y = 0;
     int scanlineOffset = 0;
@@ -111,6 +111,14 @@ class LCD {
       }
     }
     
+    gl.bindTexture(GL.TEXTURE_2D, _frontBuffer.texture);
+    gl.texSubImage2D(GL.TEXTURE_2D, 0, 0, y, 256, 1, GL.LUMINANCE_ALPHA, GL.UNSIGNED_BYTE, _scanline);
+  }
+  
+  void clearScan() {
+    int y = 0;
+    
+    _scanline.forEach((index) => _scanline[index] = 0);
     gl.bindTexture(GL.TEXTURE_2D, _frontBuffer.texture);
     gl.texSubImage2D(GL.TEXTURE_2D, 0, 0, y, 256, 1, GL.LUMINANCE_ALPHA, GL.UNSIGNED_BYTE, _scanline);
   }
