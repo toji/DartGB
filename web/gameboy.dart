@@ -25,6 +25,7 @@ class Gameboy {
         frames = 0,
         paused = true {
     rom = new ROM('../roms/$filename');
+    // TODO: wait for ROM to complete load before initializing memory.
     memory = new Memory(rom);
     timers = new Timers(memory);
     cpu = new CPU(this);

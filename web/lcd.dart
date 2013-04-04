@@ -192,6 +192,7 @@ class LCD {
   }
   
   void blitBackgroundTile(int tileIndex, int backgroundIndex) {
+    // TODO: undefined name 'i'.
     blitTile(_background, tileIndex, (i % 64) * 8, (i / 64).toInt() * 8);
   }
   
