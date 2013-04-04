@@ -8,6 +8,7 @@ class LCD {
   
   RenderTarget _frontBuffer;
   TextureHelper _tiles;
+  TextureHelper _background;
   
   GL.Buffer _quadBuffer;
   
@@ -55,6 +56,8 @@ class LCD {
     // Initializes a few useful data structures.
     initLCD();
     
+    _tileColorBuffer = new Uint32Array.fromBuffer(_tileByteBuffer.buffer);
+    
     _canvas.width = (_canvas.clientWidth * window.devicePixelRatio).toInt();
     _canvas.height = (_canvas.clientHeight * window.devicePixelRatio).toInt();
     
@@ -69,6 +72,7 @@ class LCD {
     // Allocate the front buffer
     _frontBuffer = new RenderTarget(gl, 256, 256, true);
     _tiles = new TextureHelper(gl, 24, 1024);
+    _background = new TextureHelper(gl, 512, 512);
     
     _blitShader = new ShaderHelper(gl, _blitVS, _blitFS);
     
@@ -91,11 +95,11 @@ class LCD {
       updateTile(i);
     }
     
-    blitTile(0, 0, 0);
-    blitTile(16, 8, 8);
-    blitTile(32, 16, 16);
-    blitTile(64, 32, 32);
-    blitTile(128, 130, 130);
+    blitTile(_frontBuffer, 0, 0, 0);
+    blitTile(_frontBuffer, 16, 8, 8);
+    blitTile(_frontBuffer, 32, 16, 16);
+    blitTile(_frontBuffer, 64, 32, 32);
+    blitTile(_frontBuffer, 128, 130, 130);
     
     blit(_tiles, _frontBuffer, 0, 0, 0, 128, 24, 256);
     
@@ -105,27 +109,28 @@ class LCD {
     present(64, 64);
   }
   
-  Uint8Array _tileBuffer = new Uint8Array(256);
+  Uint8Array _tileByteBuffer = new Uint8Array(256 * 128);
+  Uint32Array _tileColorBuffer;
   
   void updateTile(int tileOffset) {
     for(int i = 0; i < 256; i+=4) {
-      _tileBuffer[i] = (tileOffset % 256);
-      _tileBuffer[i+1] = (tileOffset % 256);
-      _tileBuffer[i+2] = (tileOffset % 256);
-      _tileBuffer[i+3] = 255;
+      _tileByteBuffer[i] = (tileOffset % 256);
+      _tileByteBuffer[i+1] = (tileOffset % 256);
+      _tileByteBuffer[i+2] = (tileOffset % 256);
+      _tileByteBuffer[i+3] = 255;
     }
     
     int tileX = 8 * (tileOffset / 128).toInt();
     int tileY = 8 * (tileOffset % 128);
     
     gl.bindTexture(GL.TEXTURE_2D, _tiles.texture);
-    gl.texSubImage2D(GL.TEXTURE_2D, 0, tileX, tileY, 8, 8, GL.RGBA, GL.UNSIGNED_BYTE, _tileBuffer);
+    gl.texSubImage2D(GL.TEXTURE_2D, 0, tileX, tileY, 8, 8, GL.RGBA, GL.UNSIGNED_BYTE, _tileByteBuffer);
   }
   
-  void blitTile(int tileOffset, int x, int y) {
+  void blitTile(RenderTarget target, int tileOffset, int x, int y) {
     int tileX = 8 * (tileOffset / 128).toInt();
     int tileY = 8 * (tileOffset % 128);
-    blit(_tiles, _frontBuffer, tileX, tileY, x, y, 8, 8);  
+    blit(_tiles, target, tileX, tileY, x, y, 8, 8);  
   }
   
   void blit(TextureHelper source, RenderTarget dest, int srcX, int srcY, int dstX, int dstY, int width, int height) {
@@ -175,7 +180,7 @@ class LCD {
     gl.drawArrays(GL.TRIANGLES, 0, 6);
   }
 
-  void initLCD() {
+  void initLCD() {   
     // backgroundData is a big pixel map, 4 times the size of the 
     // 256x256 screen.
     backgroundData = new List<List<int>>(512);
