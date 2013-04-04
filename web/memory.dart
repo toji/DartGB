@@ -25,10 +25,10 @@ class Memory {
   int get LCDC => _mem[0xFF40];
   bool get LCDC_displayOn => (LCDC >> 7) != 0;
   int get STAT => _mem[0xFF41];
-  bool get STAT_LYLC =>  STAT & 64 != 0;
-  bool get STAT_mode0 => STAT & 32 != 0;
-  bool get STAT_mode1 => STAT & 16 != 0;
-  bool get STAT_mode2 => STAT & 8 != 0;
+  bool get STAT_LYLC =>  ((STAT & 64) != 0);
+  bool get STAT_mode0 => ((STAT & 32) != 0);
+  bool get STAT_mode1 => ((STAT & 16) != 0);
+  bool get STAT_mode2 => ((STAT & 8) != 0);
   int get STAT_mode =>  STAT & 3;
   int get SCY =>  _mem[0xFF42];
   int get SCX =>  _mem[0xFF43];
