@@ -80,8 +80,8 @@ class LCD {
   bool get BackgroundEnabled => (memory.LCDC & 0x01) == 1;
   bool get SpritesEnabled => (memory.LCDC & 0x02) == 1;
   int get SpriteHeight => (memory.LCDC & 0x04) == 0 ? 8 : 16;
-  int get BackgroundTileSet => (memory.LCDC & 0x08) == 0 ? 0 : 1;
-  int get BackgroundOffset => (memory.LCDC & 0x10) == 0 ? 0x1C00 : 0x1800;
+  int get BackgroundOffset => (memory.LCDC & 0x08) == 0 ? 0x9800 : 0x9C00;
+  int get BackgroundTileSet => (memory.LCDC & 0x10) == 0 ? 0 : 1;
   bool get WindowEnabled => (memory.LCDC & 0x20) == 1;
   int get WindowTiles => (memory.LCDC & 0x40) == 0 ? 0 : 1;
   bool get DisplayEnabled => (memory.LCDC & 0x80) == 1;
