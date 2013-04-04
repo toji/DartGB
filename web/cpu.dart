@@ -1429,14 +1429,63 @@ class CPU {
 
     for (var i = 0; i < 8; ++i) {
       var o = (1 << 6) | (i << 3);
-      opcb[o|7] = () {
-          r['fz'] = (r['a'] & (1 << i)) == 0 ? 1 : 0;
-          r['fn'] = 0;
-          r['fh'] = 1;
-          ticks = 8;
-          // TODO: So many more here.
+      // BIT n, r - CB 01 xxx xxx - CB 01 bit reg
+      opcb[o|0] = () { BIT('b', 1 << i, 8); };
+      opcb[o|1] = () { BIT('c', 1 << i, 8); };
+      opcb[o|2] = () { BIT('d', 1 << i, 8); };
+      opcb[o|3] = () { BIT('e', 1 << i, 8); };
+      opcb[o|4] = () { BIT('hl', 256 << i, 8); };
+      opcb[o|5] = () { BIT('hl', 1 << i, 8); };
+      opcb[o|6] = () { r['t2'] = mem.R(r['hl']); BIT('t2', 1 << i, 16); };
+      opcb[o|7] = () { BIT('a', 1 << i, 8); };
+      
+      // RES n, r - CB 10 xxx xxx - CB 10 bit reg
+      o = (2 << 6) | (i << 3);
+      opcb[o|0] = () { RES('b', 1 << i, 0xFF, 8); };
+      opcb[o|1] = () { RES('c', 1 << i, 0xFF, 8); };
+      opcb[o|2] = () { RES('d', 1 << i, 0xFF, 8); };
+      opcb[o|3] = () { RES('e', 1 << i, 0xFF, 8); };
+      opcb[o|4] = () { RES('hl', 256 << i, 0xFFFF, 8); };
+      opcb[o|5] = () { RES('hl', 1 << i, 0xFFFF, 8); };
+      opcb[o|6] = () {
+          r['t2'] = mem.R(r['hl']);
+          RES('t2', 1 << i, 0xFF, 16);
+          mem.W(r['hl'], r['t2']);
       };
+      opcb[o|7] = () { RES('a', 1 << i, 0xFF, 8); };
+      
+      // SET n, r - CB 11 xxx xxx - CB 11 bit reg
+      o = (3 << 6) | (i << 3);
+      opcb[o|0] = () { SET('b', 1<<i, 8); };
+      opcb[o|1] = () { SET('c', 1<<i, 8); };
+      opcb[o|2] = () { SET('d', 1<<i, 8); };
+      opcb[o|3] = () { SET('e', 1<<i, 8); };
+      opcb[o|4] = () { SET('hl', 256<<i, 8); };
+      opcb[o|5] = () { SET('hl', 1<<i, 8); };
+      opcb[o|6] = () {
+          r['t2'] = mem.R(r['hl']);
+          SET('t2', 1<<i, 16);
+          mem.W(r['hl'], r['t2']);
+      };
+      opcb[o|7] = () { SET('a', 1<<i, 8); };
     }
+  }
+  
+  void BIT(String reg, int mask, int t) {
+    r['fz'] = (r[reg] & mask) == 0 ? 1 : 0;
+    r['fn'] = 0;
+    r['fh'] = 1;
+    ticks = t;
+  }
+  
+  void RES(String reg, int shift_mask, int mask, int t) {
+    r[reg] &= ((~shift_mask) & mask);
+    ticks = t;
+  }
+  
+  void SET(String reg, int mask, int t) {
+    r[reg] |= mask;
+    ticks = t;
   }
 
   //List<Mnemonic> mn = new List<Mnemonic>();
