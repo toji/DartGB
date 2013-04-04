@@ -20,4 +20,9 @@ class ROM {
   }
   
   ROM(this.data);
+
+  String get name {
+    List<int> name_list = data.sublist(0x0134,0x0143);
+    return new String.fromCharCodes(name_list);
+  }
 }

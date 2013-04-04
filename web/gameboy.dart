@@ -26,6 +26,7 @@ class Gameboy {
         paused = true {
     ROM.load('../roms/$filename').then((ROM r) {
         rom = r;
+        print('Loaded ${rom.name}');
         memory = new Memory(rom);
         timers = new Timers(memory);
         cpu = new CPU(this);
