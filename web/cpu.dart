@@ -1097,170 +1097,122 @@ class CPU {
     // OR A,A
     op[0xB7] = () { OR_A('a', 4); };
     // CP B
-    op[0xB8] = () {
-
-    };
+    op[0xB8] = () { CP_A('b', 4); };
     // CP C
-    op[0xB9] = () {
-
-    };
+    op[0xB9] = () { CP_A('c', 4); };
     // CP D
-    op[0xBA] = () {
-
-    };
+    op[0xBA] = () { CP_A('d', 4); };
     // CP E
-    op[0xBB] = () {
-
-    };
+    op[0xBB] = () { CP_A('e', 4); };
     // CP H
-    op[0xBC] = () {
-
-    };
+    op[0xBC] = () { r['t1'] = r['hl'] >> 8; CP_A('t1', 4); };
     // CP L
-    op[0xBD] = () {
-
-    };
+    op[0xBD] = () { r['t1'] = r['hl'] & 0xFF; CP_A('t1', 4); };
     // CP (HL)
-    op[0xBE] = () {
-
-    };
+    op[0xBE] = () { r['t1'] = mem.R(r['hl']); CP_A('t1', 8); };
     // CP A
-    op[0xBF] = () {
-
-    };
+    op[0xBF] = () { CP_A('a', 4); };
     // RET NZ
-    op[0xC0] = () {
-
-    };
+    op[0xC0] = () { RET(r['fz'] == 0); };
     // POP BC
     op[0xC1] = () {
-
+        r['c'] = mem.R(r['sp']++);
+        r['b'] = mem.R(r['sp']++);
+        ticks = 12;
     };
     // JP NZ,u16
-    op[0xC2] = () {
-
-    };
+    op[0xC2] = () { JP(r['fz'] == 0); };
     // JP u16
-    op[0xC3] = () {
-
-    };
+    op[0xC3] = () { JP(true); };
     // CALL NZ,u16
-    op[0xC4] = () {
-
-    };
+    op[0xC4] = () { CALL(r['fz'] == 0); };
     // PUSH BC
     op[0xC5] = () {
-
+        mem.W(--r['sp'], r['b']);
+        mem.W(--r['sp'], r['c']);
+        ticks = 16;
     };
     // ADD A,u8
-    op[0xC6] = () {
-
-    };
-    // RST 0xC0
-    op[0xC7] = () {
-
-    };
+    op[0xC6] = () { r['t1'] = mem.R(r['pc']++); ADD_A('t1', 8); };
+    // RST 0x00
+    op[0xC7] = () { RST(0x00); };
     // RET Z
-    op[0xC8] = () {
-
-    };
+    op[0xC8] = () { RET(r['fz'] == 1); };
     // RET
-    op[0xC9] = () {
-
-    };
+    op[0xC9] = () { RET(true); };
     // JP Z,u16
-    op[0xCA] = () {
-
-    };
+    op[0xCA] = () { JP(r['fz'] == 1); };
     // CB
-    op[0xCB] = () {
-
-    };
+    op[0xCB] = () { opcb[mem.R(r['pc']++)](); };
     // CALL Z,u16
-    op[0xCC] = () {
-
-    };
+    op[0xCC] = () { CALL(r['fz'] == 1); };
     // CALL u16
-    op[0xCD] = () {
-
-    };
+    op[0xCD] = () { CALL(true); };
     // ADC A,u8
-    op[0xCE] = () {
-
-    };
-    // RST 0xC8
-    op[0xCF] = () {
-
-    };
+    op[0xCE] = () { r['t1'] = mem.R(r['pc']++); ADC_A('t1', 8); };
+    // RST 0x08
+    op[0xCF] = () { RST(0x08); };
     // RET NC
-    op[0xD0] = () {
-
-    };
+    op[0xD0] = () { RET(r['fc'] == 0); };
     // POP DE
     op[0xD1] = () {
-
+      r['e'] = mem.R(r['sp']++);
+      r['d'] = mem.R(r['sp']++);
+      ticks = 12;
     };
     // JP NC,u16
-    op[0xD2] = () {
-
-    };
+    op[0xD2] = () { JP(r['fc'] == 0); };
     // UNKNOWN
     op[0xD3] = UNKNOWN;
     // CALL NC,u16
-    op[0xD4] = () {
-
-    };
+    op[0xD4] = () { CALL(r['fc'] == 0); };
     // PUSH DE
     op[0xD5] = () {
-
+        mem.W(--r['sp'], r['d']);
+        mem.W(--r['sp'], r['e']);
+        ticks = 16;
     };
     // SUB u8
     op[0xD6] = () {
-
+        r['t1'] = mem.R(r['pc']++);
+        SUB_A('t1', 8);
     };
     // RST 0x10
-    op[0xD7] = () {
-
-    };
+    op[0xD7] = () { RST(0x10); };
     // RET C
-    op[0xD8] = () {
-
-    };
+    op[0xD8] = () { RET(r['fc'] == 1); };
     // RETI
-    op[0xD9] = () {
-
-    };
+    op[0xD9] = () { RET(true); interrupts.enabled = true; };
     // JP C,u16
-    op[0xDA] = () {
-
-    };
+    op[0xDA] = () { JP(r['fc'] == 1); };
     // UNKNOWN
     op[0xDB] = UNKNOWN;
     // CALL C,u16
-    op[0xDC] = () {
-
-    };
+    op[0xDC] = () { CALL(r['fc'] == 1); };
     // UNKNOWN
     op[0xDD] = UNKNOWN;
     // SBC A,u8
     op[0xDE] = () {
-
+        r['t1'] = mem.R(r['pc']++);
+        SBC_A('t1', 8);
     };
     // RST 0x18
-    op[0xDF] = () {
-
-    };
+    op[0xDF] = () { RST(0x18); };
     // LD (0xFF00+u8),A
     op[0xE0] = () {
-
+        mem.W(0xFF00 + mem.R(r['pc']++), r['a']);
+        ticks = 12;
     };
     // POP HL
     op[0xE1] = () {
-
+        r['t1'] = mem.R(r['sp']++);
+        r['hl'] = (mem.R(r['sp']++)<<8)|r['t1'];
+        ticks = 12;
     };
     // LD (0xFF00+C),A
     op[0xE2] = () {
-
+        mem.W(0xFF00 + r['c'], r['a']);
+        ticks = 8;
     };
     // UNKNOWN
     op[0xE3] = UNKNOWN;
@@ -1268,102 +1220,109 @@ class CPU {
     op[0xE4] = UNKNOWN;
     // PUSH HL
     op[0xE5] = () {
-
+        mem.W(--r['sp'], r['hl'] >> 8);
+        mem.W(--r['sp'], r['hl'] & 0xFF);
+        ticks = 16;
     };
     // AND u8
-    op[0xE6] = () {
-
-    };
+    op[0xE6] = () { AND_A(mem.R(r['pc']++), 8); };
     // RST 0x20
-    op[0xE7] = () {
-
-    };
+    op[0xE7] = () { RST(0x20); };
     // ADD SP,u8
     op[0xE8] = () {
-
+        r['sp'] = ADD16(r['sp'], Util.signed(mem.R(r['pc']++)));
+        ticks += 8;
     };
     // JP (HL)
     op[0xE9] = () {
-
+        r['pc'] = r['hl'];
+        ticks = 4;
     };
     // LD (u16),A
     op[0xEA] = () {
-
+        mem.W((mem.R(r['pc']+1)<<8)|mem.R(r['pc']), r['a']);
+        r['pc'] += 2;
+        ticks = 16;
     };
     // UNKNOWN
     op[0xEB] = UNKNOWN;
     // UNKNOWN
     op[0xEC] = UNKNOWN;
     // UNKNOWN
-    op[0xED] = () {
-
-    };
+    op[0xED] = UNKNOWN;
     // XOR u8
-    op[0xEE] = () {
-
-    };
+    op[0xEE] = () { XOR_A(mem.R(r['pc']++), 8); };
     // RST 0x28
-    op[0xEF] = () {
-
-    };
+    op[0xEF] = () { RST(0x28); };
     // LD A,(0xFF00+u8)
     op[0xF0] = () {
-
+        r['a'] = mem.R(0xFF00 + mem.R(r['pc']++));
+        ticks = 12;
     };
     // POP AF
     op[0xF1] = () {
-
+        r['t1'] = mem.R(r['sp']++);
+        r['a'] = mem.R(r['sp']++);
+        r['fz'] = (r['t1']>>7)&1;
+        r['fn'] = (r['t1']>>6)&1;
+        r['fh'] = (r['t1']>>5)&1;
+        r['fc'] = (r['t1']>>4)&1;
+        ticks = 12;
     };
+    
     // LD A,(0xFF00+C)
     op[0xF2] = () {
-
+        r['a'] = mem.R(0xFF00 + r['c']);
+        ticks = 8;
     };
     // DI
-    op[0xF3] = () {
-
-    };
+    op[0xF3] = () { interrupts.enabled = false; ticks = 4; };
     // UNKNOWN
     op[0xF4] = UNKNOWN;
     // PUSH AF
     op[0xF5] = () {
-
+        mem.W(--r['sp'], r['a']);
+        mem.W(--r['sp'], (r['fz']<<7)|(r['fn']<<6)|(r['fh']<<5)|(r['fc']<<4));
+        ticks = 16;
     };
     // OR u8
-    op[0xF6] = () {
-
-    };
+    op[0xF6] = () { OR_A(mem.R(r['pc']++), 8); };
     // RST 0x30
-    op[0xF7] = () {
-
-    };
+    op[0xF7] = () { RST(0x30); };
     // LD HL,SP+u8
     op[0xF8] = () {
-
+        var n = mem.R(r['pc']++);
+        r['hl'] = r['sp'] + Util.signed(n);
+        r['fz'] = 0;
+        r['fn'] = 0;
+        r['fh'] = ((r['sp']&0x0F) + (n&0x0F)) > 0x0F ? 1 : 0;
+        r['fc'] = ((r['sp']&0xFF) + (n&0xFF)) > 0xFF ? 1 : 0;
+        ticks = 12;
     };
     // LD SP,HL
     op[0xF9] = () {
-
+        r['sp'] = r['hl'];
+        ticks = 8;
     };
     // LD A,(u16)
     op[0xFA] = () {
-
+        r['a'] = mem.R((mem.R(r['pc']+1)<<8)|mem.R(r['pc']));
+        r['pc'] += 2;
+        ticks = 16;
     };
     // EI
-    op[0xFB] = () {
-
-    };
+    op[0xFB] = () { interrupts.enabled = true; ticks = 4; };
     // UNKNOWN
     op[0xFC] = UNKNOWN;
     // UNKNOWN
     op[0xFD] = UNKNOWN;
     // CP u8
     op[0xFE] = () {
-
+        r['t1'] = mem.R(r['pc']++);
+        CP_A('t1', 8);
     };
     // RST 0x38
-    op[0xFF] = () {
-
-    };
+    op[0xFF] = () { RST(0x38); };
   }
     
   void buildOpCodeCBs() {
