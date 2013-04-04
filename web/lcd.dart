@@ -149,37 +149,49 @@ class LCD {
   
   Uint8Array _tileByteBuffer = new Uint8Array(256);
   
-  void updateTile(int tileOffset) {
-    int tileValue;
-    for(int i = 0; i < 256; i+=4) {
-      tileValue = tileOffset % 4; // TODO: get value from memory
+  void updateTile(int tileIndex) {
+    int tileOffset = 0x8000 + (tileIndex * 16);
+    int bufferOffset = 0;
+    
+    print("Updating Tile $tileIndex (0x${tileOffset.toRadixString(16)})");
+    
+    // Tiles are read one row at a time
+    for(int i = 0; i < 8; ++i) {
+      int rowLow = memory.R(tileOffset++);
+      int rowHigh = memory.R(tileOffset++) << 1;
       
-      // These values should be looked up from a pallet at draw time
-      if(tileValue == 0) {
-        _tileByteBuffer[i] = 255;
-        _tileByteBuffer[i+1] = 255;
-        _tileByteBuffer[i+2] = 255;
-        _tileByteBuffer[i+3] = 0;
-      } else if(tileValue == 1) {
-        _tileByteBuffer[i] = 192;
-        _tileByteBuffer[i+1] = 192;
-        _tileByteBuffer[i+2] = 192;
-        _tileByteBuffer[i+3] = 255;
-      } else if(tileValue == 2) {
-        _tileByteBuffer[i] = 96;
-        _tileByteBuffer[i+1] = 96;
-        _tileByteBuffer[i+2] = 96;
-        _tileByteBuffer[i+3] = 255;
-      } else {
-        _tileByteBuffer[i] = 0;
-        _tileByteBuffer[i+1] = 0;
-        _tileByteBuffer[i+2] = 0;
-        _tileByteBuffer[i+3] = 255;
+      for(int j = 0; j < 8; ++j) {
+        int tileValue = ((rowLow >> j) & 0x01) + ((rowHigh >> j) & 0x02);
+        //int tileValue = (i + j) % 4; // For Great Debugging!
+        
+        print("($i, $j) == $tileValue");
+        
+        if(tileValue == 0) {
+          _tileByteBuffer[bufferOffset++] = 255;
+          _tileByteBuffer[bufferOffset++] = 255;
+          _tileByteBuffer[bufferOffset++] = 255;
+          _tileByteBuffer[bufferOffset++] = 0;
+        } else if(tileValue == 1) {
+          _tileByteBuffer[bufferOffset++] = 192;
+          _tileByteBuffer[bufferOffset++] = 192;
+          _tileByteBuffer[bufferOffset++] = 192;
+          _tileByteBuffer[bufferOffset++] = 255;
+        } else if(tileValue == 2) {
+          _tileByteBuffer[bufferOffset++] = 96;
+          _tileByteBuffer[bufferOffset++] = 96;
+          _tileByteBuffer[bufferOffset++] = 96;
+          _tileByteBuffer[bufferOffset++] = 255;
+        } else {
+          _tileByteBuffer[bufferOffset++] = 0;
+          _tileByteBuffer[bufferOffset++] = 0;
+          _tileByteBuffer[bufferOffset++] = 0;
+          _tileByteBuffer[bufferOffset++] = 255;
+        }
       }
     }
     
-    int tileX = 8 * (tileOffset / 128).toInt();
-    int tileY = 8 * (tileOffset % 128);
+    int tileX = 8 * (tileIndex / 128).toInt();
+    int tileY = 8 * (tileIndex % 128);
     
     gl.bindTexture(GL.TEXTURE_2D, _tiles.texture);
     gl.texSubImage2D(GL.TEXTURE_2D, 0, tileX, tileY, 8, 8, GL.RGBA, GL.UNSIGNED_BYTE, _tileByteBuffer);
@@ -192,8 +204,10 @@ class LCD {
   }
   
   void blitBackgroundTile(int tileIndex, int backgroundIndex) {
-    // TODO: undefined name 'i'.
-    blitTile(_background, tileIndex, (i % 64) * 8, (i / 64).toInt() * 8);
+    // TODO: This may be wrong! Possibly need to wrap at 32 tiles instead of 64
+    int backgroundX = (tileIndex % 64) * 8;
+    int backgroundY = (tileIndex / 64).toInt() * 8;
+    blitTile(_background, tileIndex, backgroundX, backgroundY);
   }
   
   // Generally following the API used by jsgb.
@@ -220,23 +234,10 @@ class LCD {
       tile1 = 256 + Util.signed(tile0);
       
       if (memory.updatedTiles[tile0] || memory.updatedBackground[i]) {
-        blitBackgroundTile(tile0, i); // TODO: Calculate tile x/y
-        /*rowOffset = 8;
-        while (row-- != 0) {
-          tileline = tileData[tile0][rowOffset]; // 8px long.
-          backline = backgroundData[row + rowOffset]; // 512px long.
-          backline.setRange(col, 8, tileline);
-        }*/
+        blitBackgroundTile(tile0, i);
       }
       if (memory.updatedTiles[tile1] || memory.updatedBackground[i]) {
-        blitBackgroundTile(tile1, i); // TODO: Calculate tile x/y
-        
-        /*rowOffset = 8;
-        while (row-- != 0) {
-          tileline = tileData[tile1][rowOffset];
-          backline = backgroundData[row + rowOffset];
-          backline.setRange(256 + col, 8, tileline); // +256 => on the right
-        }*/
+        blitBackgroundTile(tile1, i);
       }
       memory.updatedBackground[i] = false;
       if ((col+= 8) >= 256) {
