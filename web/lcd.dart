@@ -43,9 +43,9 @@ class LCD {
     
     gl = _canvas.getContext3d(alpha: true, depth: false, antialias: false, preserveDrawingBuffer: true);
     gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
+    //gl.enable(GL.BLEND);
+    //gl.blendFunc(GL.ZERO, GL.DST_ALPHA);
     
-    gl.clearColor(0.0, 0.0, 1.0, 1.0);
-    gl.clear(GL.COLOR_BUFFER_BIT);
     gl.clearColor(0.0, 0.0, 0.0, 0.0);
     
     // Allocate the front buffer
@@ -105,7 +105,7 @@ class LCD {
   void SetScanline(int offset, int value) {
     int scanlineOffset = offset * 2;
     if(value == 0) {
-      _scanline[scanlineOffset] = 255;
+      _scanline[scanlineOffset] = 0;
       _scanline[scanlineOffset+1] = 0;
     } else if(value == 1) {
       _scanline[scanlineOffset] = 192;
