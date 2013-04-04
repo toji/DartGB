@@ -108,11 +108,11 @@ class LCD {
       _scanline[scanlineOffset] = 0;
       _scanline[scanlineOffset+1] = 0;
     } else if(value == 1) {
-      _scanline[scanlineOffset] = 192;
-      _scanline[scanlineOffset+1] = 255;
+      _scanline[scanlineOffset] = 0;
+      _scanline[scanlineOffset+1] = 96;
     } else if(value == 2) {
-      _scanline[scanlineOffset] = 96;
-      _scanline[scanlineOffset+1] = 255;
+      _scanline[scanlineOffset] = 0;
+      _scanline[scanlineOffset+1] = 192;
     } else {
       _scanline[scanlineOffset] = 0;
       _scanline[scanlineOffset+1] = 255;
