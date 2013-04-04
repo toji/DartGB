@@ -4,13 +4,12 @@ typedef void OpFunc();
 //typedef String Mnemonic();
 
 class CPU {
-  Memory mem = null;
-  Interrupts interrupts = null;
+  Gameboy gb = null;
   int ticks = 0;
   
   Uint16List daaTable = new Uint16List(256 * 8);
-  List<OpFunc> op = new List<OpFunc>(255);
-  List<OpFunc> opcb = new List<OpFunc>(255);
+  List<OpFunc> op = new List<OpFunc>(256);
+  List<OpFunc> opcb = new List<OpFunc>(256);
   
   Map<String, int> r = {
     'a': 0x01,
@@ -29,18 +28,18 @@ class CPU {
     't2': 0x00,
   };
   
-  CPU(this.mem, this.interrupts) {
+  CPU(this.gb) {
     buildDAATable();
     buildOpCodes();
     buildOpCodeCBs();
   }
   
   void next() {
-    if (interrupts.halt)
+    if (gb.interrupts.halt)
       ticks = 4;
     else {
       var pc = r['pc'];
-      var opCode = mem.R(pc);
+      var opCode = gb.memory.R(pc);
       op[opCode]();
       r['pc'] = ++pc;
     }
@@ -51,7 +50,9 @@ class CPU {
     assert(false);
   }
   
-  void NOP() => ticks = 0;
+  void NOP() {
+    ticks = 0;
+  }
 
   int RL(var n) {
     r['t1'] = r['fc'];
@@ -100,8 +101,8 @@ class CPU {
       r['hl'] = ((hl & 0x000F) << 4) | ((hl & 0x00F0) >> 4) | (hl & 0xFF00);
     } else if (reg == 'hl') {
       var hl = r['hl'];
-      r['t1'] = mem.R(r['hl']);
-      mem.W(r['hl'], ((r['t1']<<4)|(r['t1']>>4)) & 0xFF);
+      r['t1'] = gb.memory.R(r['hl']);
+      gb.memory.W(r['hl'], ((r['t1']<<4)|(r['t1']>>4)) & 0xFF);
     } else {
       var r = r[reg];
       r[reg] = ((r<<4) | (r>>4)) & 0xFF;
@@ -232,7 +233,7 @@ class CPU {
 
   void JR(bool c) {
     if (c) {
-      r['pc'] += Util.signed(mem.R(r['pc'])) + 1;
+      r['pc'] += Util.signed(gb.memory.R(r['pc'])) + 1;
       ticks = 12;
     } else {
       r['pc']++;
@@ -242,7 +243,7 @@ class CPU {
 
   void JP(bool c) {
     if (c) {
-      r['pc'] = (mem.R(r['pc'] + 1) << 8) | mem.R(r['pc']);
+      r['pc'] = (gb.memory.R(r['pc'] + 1) << 8) | gb.memory.R(r['pc']);
     } else {
       r['pc'] += 2;
     }
@@ -252,9 +253,9 @@ class CPU {
   void CALL(bool c) {
     if (c) {
       r['pc'] += 2;
-      mem.W(--r['sp'], r['pc'] >> 8);
-      mem.W(--r['sp'], r['pc'] & 0xFF);
-      r['pc'] = (mem.R(r['pc'] - 1) << 8) | mem.R(r['pc'] - 2);
+      gb.memory.W(--r['sp'], r['pc'] >> 8);
+      gb.memory.W(--r['sp'], r['pc'] & 0xFF);
+      r['pc'] = (gb.memory.R(r['pc'] - 1) << 8) | gb.memory.R(r['pc'] - 2);
     } else {
       r['pc'] += 2;
     }
@@ -262,15 +263,15 @@ class CPU {
   }
 
   void RST(int a) {
-    mem.W(--r['sp'], r['pc'] >> 8);
-    mem.W(--r['sp'], r['pc'] & 0xFF);
+    gb.memory.W(--r['sp'], r['pc'] >> 8);
+    gb.memory.W(--r['sp'], r['pc'] & 0xFF);
     r['pc'] = a;
     ticks = 32;
   }
 
   void RET(bool c) {
     if (c) {
-      r['pc'] = (mem.R(r['sp'] + 1) << 8) | mem.R(r['sp']);
+      r['pc'] = (gb.memory.R(r['sp'] + 1) << 8) | gb.memory.R(r['sp']);
       r['sp'] += 2;
     }
     ticks = 8;
@@ -286,17 +287,17 @@ class CPU {
   }
 
   void HALT() {
-    if (interrupts.enabled)
-      interrupts.halt = true;
+    if (gb.interrupts.enabled)
+      gb.interrupts.halt = true;
     else
       assert(false); // 'HALT instruction with interrupts disabled.');
     ticks = 4;
   }
 
   void LD_MEM_R16(String reg, int t) {
-    r['t1'] = (mem.R(r['pc'] + 1) << 8) + mem.R(r['pc']);
-    mem.W(r['t1'], r[reg] & 0xFF);
-    mem.W(r['t1'] + 1, r[reg] >> 8);
+    r['t1'] = (gb.memory.R(r['pc'] + 1) << 8) + gb.memory.R(r['pc']);
+    gb.memory.W(r['t1'], r[reg] & 0xFF);
+    gb.memory.W(r['t1'] + 1, r[reg] >> 8);
     r['pc'] += 2;
     ticks = t;
   }
@@ -584,13 +585,13 @@ class CPU {
     op[0x00] = NOP;
     // LD BC, u16
     op[0x01] = () {
-        r['c'] = mem.R(r['pc']++);
-        r['b'] = mem.R(r['pc']++);
+        r['c'] = gb.memory.R(r['pc']++);
+        r['b'] = gb.memory.R(r['pc']++);
         ticks = 12;
     };
     // LD (BC), A
     op[0x02] = () {
-        mem.W((r['b'] << 8) | r['c'], r['a']);
+        gb.memory.W((r['b'] << 8) | r['c'], r['a']);
         ticks = 8;
     };
     // INC BC
@@ -604,7 +605,7 @@ class CPU {
     // DEC B
     op[0x05] = () { DEC('b', 4); };
     // LD B, u8
-    op[0x06] = () { r['b'] = mem.R(r['pc']++); ticks = 8; };
+    op[0x06] = () { r['b'] = gb.memory.R(r['pc']++); ticks = 8; };
     // RLCA
     op[0x07] = () {
         r['fc'] = (r['a'] >> 7) & 1;
@@ -621,7 +622,7 @@ class CPU {
     };
     // LD A,(BC)
     op[0x0A] = () {
-        r['a'] = mem.R(((r['b'] & 0x00FF) << 8) | r['c']);
+        r['a'] = gb.memory.R(((r['b'] & 0x00FF) << 8) | r['c']);
         ticks = 8;
     };
     // DEC BC
@@ -636,7 +637,7 @@ class CPU {
     // DEC C
     op[0x0D] = () { DEC('c', 4); };
     // LD C,u8
-    op[0x0E] = () { r['c'] = mem.R(r['pc']++); ticks = 8; };
+    op[0x0E] = () { r['c'] = gb.memory.R(r['pc']++); ticks = 8; };
     // RRCA
     op[0x0F] = () {
         r['fc'] = r['a'] & 1;
@@ -652,13 +653,13 @@ class CPU {
     };
     // LD DE,u16
     op[0x11] = () {
-        r['e'] = mem.R(r['pc']++);
-        r['d'] = mem.R(r['pc']++);
+        r['e'] = gb.memory.R(r['pc']++);
+        r['d'] = gb.memory.R(r['pc']++);
         ticks = 12;
     };
     // LD (DE), A
     op[0x12] = () {
-        mem.W((r['d'] << 8) | r['e'], r['a']);
+        gb.memory.W((r['d'] << 8) | r['e'], r['a']);
         ticks = 8;
     };
     // INC DE
@@ -672,7 +673,7 @@ class CPU {
     // DEC D
     op[0x15] = () { DEC('d', 4); };
     // LD D,u8
-    op[0x16] = () { r['d'] = mem.R(r['pc']++); ticks = 8; };
+    op[0x16] = () { r['d'] = gb.memory.R(r['pc']++); ticks = 8; };
     // RLA
     op[0x17] = () { RLA(); };
     // JR s8
@@ -681,7 +682,7 @@ class CPU {
     op[0x19] = () { r['hl'] = ADD16(r['hl'], (r['d'] << 8) | r['e']); };
     // LD A,(DE)
     op[0x1A] = () {
-        r['a'] = mem.R(((r['d'] & 0x00FF) << 8) | r['e']);
+        r['a'] = gb.memory.R(((r['d'] & 0x00FF) << 8) | r['e']);
         ticks = 8;
     };
     // DEC DE
@@ -697,7 +698,7 @@ class CPU {
     op[0x1D] = () { DEC('e', 4); };
     // LD E,u8
     op[0x1E] = () {
-        r['e'] = mem.R(r['pc']++);
+        r['e'] = gb.memory.R(r['pc']++);
         ticks = 8;
     };
     // RRA
@@ -706,20 +707,20 @@ class CPU {
         r['fc'] = r['a'] & 1;
         r['a'] = (r['a'] >> 1) | (r['t1'] << 7);
         r['fn'] = r['fh'] = 0;
-        r['fz'] = r['a'] == 0 ? 1 : 0;
+        r['fz'] = r['a'] == 0 ? 1 : 0;
         ticks = 4;
     };
     // JR NZ,s8
     op[0x20] = () { JR(r['fz'] == 0); };
     // LD HL,u16
     op[0x21] = () {
-        r['hl'] = (mem.R(r['pc'] + 1) << 8) | mem.R(r['pc']);
+        r['hl'] = (gb.memory.R(r['pc'] + 1) << 8) | gb.memory.R(r['pc']);
         r['pc'] += 2;
         ticks = 12;
     };
     // LDI (HL),A
     op[0x22] = () {
-      mem.W(r['hl'], r['a']);
+      gb.memory.W(r['hl'], r['a']);
       r['hl'] = (r['hl'] + 1) & 0xFFFF;
       ticks = 8;
     };
@@ -740,7 +741,7 @@ class CPU {
     // LD H,u8
     op[0x26] = () {
         r['hl'] &= 0x00FF;
-        r['hl'] |= mem.R(r['pc']++)<<8;
+        r['hl'] |= gb.memory.R(r['pc']++)<<8;
         ticks = 8;
     };
     // DAA
@@ -751,7 +752,7 @@ class CPU {
     op[0x29] = () { r['hl'] = ADD16(r['hl'], r['hl']); };
     // LDI A,(HL)
     op[0x2A] = () {
-        r['a'] = mem.R(r['hl']);
+        r['a'] = gb.memory.R(r['hl']);
         r['hl'] = (r['hl'] + 1) & 0xFFFF;
         ticks = 8;
     };
@@ -774,7 +775,7 @@ class CPU {
     };
     // LD L,u8
     op[0x2E] = () {
-        r['hl'] &= 0xFF00; r['hl'] |= mem.R(r['pc']++);
+        r['hl'] &= 0xFF00; r['hl'] |= gb.memory.R(r['pc']++);
         ticks = 8;
     };
     // CPL
@@ -788,13 +789,13 @@ class CPU {
     op[0x30] = () { JR(r['fc'] == 0); };
     // LD SP,u16
     op[0x31] = () {
-        r['sp'] = (mem.R(r['pc'] + 1) << 8) | mem.R(r['pc']);
+        r['sp'] = (gb.memory.R(r['pc'] + 1) << 8) | gb.memory.R(r['pc']);
         r['pc'] += 2;
         ticks = 12;
     };
     // LDD (HL),A
     op[0x32] = () {
-        mem.W(r['hl'], r['a']);
+        gb.memory.W(r['hl'], r['a']);
         r['hl'] = (r['hl'] - 1) & 0xFFFF;
         ticks = 8;
     };
@@ -802,20 +803,20 @@ class CPU {
     op[0x33] = () { r['sp'] = INC16(r['sp']); };
     // INC (HL)
     op[0x34] = () {
-        r['t1'] = mem.R(r['hl']);
+        r['t1'] = gb.memory.R(r['hl']);
         INC('t1', 12);
-        mem.W(r['hl'], r['t1']);
+        gb.memory.W(r['hl'], r['t1']);
     };
     // DEC (HL)
     op[0x35] = () {
-      r['t1'] = mem.R(r['hl']);
+      r['t1'] = gb.memory.R(r['hl']);
       DEC('t1', 12);
-      mem.W(r['hl'], r['t1']);
+      gb.memory.W(r['hl'], r['t1']);
 
     };
     // LD (HL),u8
     op[0x36] = () {
-      mem.W(r['hl'], mem.R(r['pc']++));
+      gb.memory.W(r['hl'], gb.memory.R(r['pc']++));
       ticks = 12;
     };
     // SCF
@@ -831,7 +832,7 @@ class CPU {
     op[0x39] = () { r['hl'] = ADD16(r['hl'], r['sp']); };
     // LDD A,(HL)
     op[0x3A] = () {
-        r['a'] = mem.R(r['hl']);
+        r['a'] = gb.memory.R(r['hl']);
         r['hl'] = (r['hl'] - 1) & 0xFFFF;
         ticks = 8;
     };
@@ -846,7 +847,7 @@ class CPU {
     op[0x3D] = () { DEC('a', 4); };
     // LD A,u8
     op[0x3E] = () {
-        r['a'] = mem.R(r['pc']++);
+        r['a'] = gb.memory.R(r['pc']++);
         ticks = 8;
     };
     // CCF
@@ -868,7 +869,7 @@ class CPU {
     // LD B,L
     op[0x45] = () { r['b'] = r['hl'] & 0xFF; ticks = 4; };
     // LD B,(HL)
-    op[0x46] = () { r['b'] = mem.R(r['hl']); ticks = 8; };
+    op[0x46] = () { r['b'] = gb.memory.R(r['hl']); ticks = 8; };
     // LD B,A
     op[0x47] = () { r['b'] = r['a']; ticks = 4; };
     // LD C,B
@@ -884,7 +885,7 @@ class CPU {
     // LD C,L
     op[0x4D] = () { r['c'] = r['hl'] & 0xFF; ticks = 4; };
     // LD C,(HL)
-    op[0x4E] = () { r['c'] = mem.R(r['hl']); ticks = 8; };
+    op[0x4E] = () { r['c'] = gb.memory.R(r['hl']); ticks = 8; };
     // LD C,A
     op[0x4F] = () { r['c'] = r['a']; ticks = 4; };
     // LD D,B
@@ -900,7 +901,7 @@ class CPU {
     // LD D,L
     op[0x55] = () { r['d'] = r['hl'] & 0xFF; ticks = 4; };
     // LD D,(HL)
-    op[0x56] = () { r['d'] = mem.R(r['hl']); ticks = 8; };
+    op[0x56] = () { r['d'] = gb.memory.R(r['hl']); ticks = 8; };
     // LD D,A
     op[0x57] = () { r['d'] = r['a']; ticks = 4; };
     // LD E,B
@@ -916,7 +917,7 @@ class CPU {
     // LD E,L
     op[0x5D] = () { r['e'] = r['hl'] & 0xFF; ticks = 4; };
     // LD E,(HL)
-    op[0x5E] = () { r['e'] = mem.R(r['hl']); ticks = 8; };
+    op[0x5E] = () { r['e'] = gb.memory.R(r['hl']); ticks = 8; };
     // LD E,A
     op[0x5F] = () { r['e'] = r['a']; ticks = 4; };
     // LD H,B
@@ -932,7 +933,7 @@ class CPU {
     // LD H,L
     op[0x65] = () { r['hl'] = (r['hl']&0x00FF)|((r['hl']&0xFF)<<8); ticks = 4; };
     // LD H,(HL)
-    op[0x66] = () { r['hl'] = (r['hl']&0x00FF)|(mem.R(r['hl'])<<8); ticks = 8; };
+    op[0x66] = () { r['hl'] = (r['hl']&0x00FF)|(gb.memory.R(r['hl'])<<8); ticks = 8; };
     // LD H,A
     op[0x67] = () { r['hl'] = (r['hl']&0x00FF)|(r['a']<<8); ticks = 4; };
     // LD L,B
@@ -948,25 +949,25 @@ class CPU {
     // LD L,L
     op[0x6D] = NOP;
     // LD L,(HL)
-    op[0x6E] = () { r['hl'] = (r['hl']&0xFF00)|(mem.R(r['hl'])); ticks = 8; };
+    op[0x6E] = () { r['hl'] = (r['hl']&0xFF00)|(gb.memory.R(r['hl'])); ticks = 8; };
     // LD L,A
     op[0x6F] = () { r['hl'] = (r['hl']&0xFF00)|r['a']; ticks = 4; };
     // LD (HL), B
-    op[0x70] = () { mem.W(r['hl'], r['b']); ticks = 8; };
+    op[0x70] = () { gb.memory.W(r['hl'], r['b']); ticks = 8; };
     // LD (HL), C
-    op[0x71] = () { mem.W(r['hl'], r['c']); ticks = 8; };
+    op[0x71] = () { gb.memory.W(r['hl'], r['c']); ticks = 8; };
     // LD (HL), D
-    op[0x72] = () { mem.W(r['hl'], r['d']); ticks = 8; };
+    op[0x72] = () { gb.memory.W(r['hl'], r['d']); ticks = 8; };
     // LD (HL), E
-    op[0x73] = () { mem.W(r['hl'], r['e']); ticks = 8; };
+    op[0x73] = () { gb.memory.W(r['hl'], r['e']); ticks = 8; };
     // LD (HL), H
-    op[0x74] = () { mem.W(r['hl'], r['hl'] >> 8); ticks = 8; };
+    op[0x74] = () { gb.memory.W(r['hl'], r['hl'] >> 8); ticks = 8; };
     // LD (HL), L
-    op[0x75] = () { mem.W(r['hl'], r['hl'] & 0x00FF); ticks = 8; };
+    op[0x75] = () { gb.memory.W(r['hl'], r['hl'] & 0x00FF); ticks = 8; };
     // HALT
     op[0x76] = HALT;
     // LD (HL), A
-    op[0x77] = () { mem.W(r['hl'], r['a']); ticks = 8; };
+    op[0x77] = () { gb.memory.W(r['hl'], r['a']); ticks = 8; };
     // LD A,B
     op[0x78] = () { r['a'] = r['b']; ticks = 4; };
     // LD A,C
@@ -980,7 +981,7 @@ class CPU {
     // LD A,L
     op[0x7D] = () { r['a'] = r['hl'] & 0x00FF; ticks = 4; };
     // LD A,(HL)
-    op[0x7E] = () { r['a'] = mem.R(r['hl']); ticks = 8; };
+    op[0x7E] = () { r['a'] = gb.memory.R(r['hl']); ticks = 8; };
     // LD A, A
     op[0x7F] = NOP;
     // ADD A,B
@@ -996,7 +997,7 @@ class CPU {
     // ADD A,L
     op[0x85] = () { r['t1'] = r['hl'] & 0x00FF; ADD_A('t1', 4); };
     // ADD A,(HL)
-    op[0x86] = () { r['t1'] = mem.R(r['hl']); ADD_A('t1', 4); };
+    op[0x86] = () { r['t1'] = gb.memory.R(r['hl']); ADD_A('t1', 4); };
     // ADD A,A
     op[0x87] = () { ADD_A('a', 4); };
     // ADC A,B
@@ -1012,7 +1013,7 @@ class CPU {
     // ADC A,L
     op[0x8D] = () { r['t1'] = r['hl'] & 0xFF; ADC_A('t1', 4); };
     // ADC A,(HL)
-    op[0x8E] = () { r['t1'] = mem.R(r['hl']); ADC_A('t1', 8); };
+    op[0x8E] = () { r['t1'] = gb.memory.R(r['hl']); ADC_A('t1', 8); };
     // ADC A,A
     op[0x8F] = () { ADC_A('a', 4); };
     // SUB B
@@ -1028,7 +1029,7 @@ class CPU {
     // SUB L
     op[0x95] = () { r['t1'] = r['hl'] & 0xFF; SUB_A('t1', 4); };
     // SUB (HL)
-    op[0x96] = () { r['t1'] = mem.R(r['h1']); SUB_A('t1', 8); };
+    op[0x96] = () { r['t1'] = gb.memory.R(r['h1']); SUB_A('t1', 8); };
     // SUB A
     op[0x97] = () { SUB_A('a', 4); };
     // SBC A,B
@@ -1044,7 +1045,7 @@ class CPU {
     // SBC A,L
     op[0x9D] = () { r['t1'] = r['hl'] & 0xFF; SBC_A('t1', 4); };
     // SBC A,(HL)
-    op[0x9E] = () { r['t1'] = mem.R(r['hl']); SBC_A('t1', 4); };
+    op[0x9E] = () { r['t1'] = gb.memory.R(r['hl']); SBC_A('t1', 4); };
     // SBC A,A
     op[0x9F] = () { SBC_A('a', 4); };
     // AND B
@@ -1060,7 +1061,7 @@ class CPU {
     // AND A,L
     op[0xA5] = () { r['t1'] = r['hl'] & 0xFF; AND_A('t1', 4); };
     // AND A,(HL)
-    op[0xA6] = () { r['t1'] = mem.R(r['hl']); AND_A('t1', 4); };
+    op[0xA6] = () { r['t1'] = gb.memory.R(r['hl']); AND_A('t1', 4); };
     // AND A,A
     op[0xA7] = () { AND_A('a', 4); };
     // XOR B
@@ -1076,7 +1077,7 @@ class CPU {
     // XOR A,L
     op[0xAD] = () { r['t1'] = r['hl'] & 0xFF; XOR_A('t1', 4); };
     // XOR A,(HL)
-    op[0xAE] = () { r['t1'] = mem.R(r['hl']); XOR_A('t1', 4); };
+    op[0xAE] = () { r['t1'] = gb.memory.R(r['hl']); XOR_A('t1', 4); };
     // XOR A,A
     op[0xAF] = () { XOR_A('a', 4); };
     // OR B
@@ -1092,7 +1093,7 @@ class CPU {
     // OR A,L
     op[0xB5] = () { r['t1'] = r['hl'] & 0xFF; OR_A('t1', 4); };
     // OR A,(HL)
-    op[0xB6] = () { r['t1'] = mem.R(r['hl']); OR_A('t1', 4); };
+    op[0xB6] = () { r['t1'] = gb.memory.R(r['hl']); OR_A('t1', 4); };
     // OR A,A
     op[0xB7] = () { OR_A('a', 4); };
     // CP B
@@ -1108,15 +1109,15 @@ class CPU {
     // CP L
     op[0xBD] = () { r['t1'] = r['hl'] & 0xFF; CP_A('t1', 4); };
     // CP (HL)
-    op[0xBE] = () { r['t1'] = mem.R(r['hl']); CP_A('t1', 8); };
+    op[0xBE] = () { r['t1'] = gb.memory.R(r['hl']); CP_A('t1', 8); };
     // CP A
     op[0xBF] = () { CP_A('a', 4); };
     // RET NZ
     op[0xC0] = () { RET(r['fz'] == 0); };
     // POP BC
     op[0xC1] = () {
-        r['c'] = mem.R(r['sp']++);
-        r['b'] = mem.R(r['sp']++);
+        r['c'] = gb.memory.R(r['sp']++);
+        r['b'] = gb.memory.R(r['sp']++);
         ticks = 12;
     };
     // JP NZ,u16
@@ -1127,12 +1128,12 @@ class CPU {
     op[0xC4] = () { CALL(r['fz'] == 0); };
     // PUSH BC
     op[0xC5] = () {
-        mem.W(--r['sp'], r['b']);
-        mem.W(--r['sp'], r['c']);
+        gb.memory.W(--r['sp'], r['b']);
+        gb.memory.W(--r['sp'], r['c']);
         ticks = 16;
     };
     // ADD A,u8
-    op[0xC6] = () { r['t1'] = mem.R(r['pc']++); ADD_A('t1', 8); };
+    op[0xC6] = () { r['t1'] = gb.memory.R(r['pc']++); ADD_A('t1', 8); };
     // RST 0x00
     op[0xC7] = () { RST(0x00); };
     // RET Z
@@ -1142,21 +1143,21 @@ class CPU {
     // JP Z,u16
     op[0xCA] = () { JP(r['fz'] == 1); };
     // CB
-    op[0xCB] = () { opcb[mem.R(r['pc']++)](); };
+    op[0xCB] = () { opcb[gb.memory.R(r['pc']++)](); };
     // CALL Z,u16
     op[0xCC] = () { CALL(r['fz'] == 1); };
     // CALL u16
     op[0xCD] = () { CALL(true); };
     // ADC A,u8
-    op[0xCE] = () { r['t1'] = mem.R(r['pc']++); ADC_A('t1', 8); };
+    op[0xCE] = () { r['t1'] = gb.memory.R(r['pc']++); ADC_A('t1', 8); };
     // RST 0x08
     op[0xCF] = () { RST(0x08); };
     // RET NC
     op[0xD0] = () { RET(r['fc'] == 0); };
     // POP DE
     op[0xD1] = () {
-      r['e'] = mem.R(r['sp']++);
-      r['d'] = mem.R(r['sp']++);
+      r['e'] = gb.memory.R(r['sp']++);
+      r['d'] = gb.memory.R(r['sp']++);
       ticks = 12;
     };
     // JP NC,u16
@@ -1167,13 +1168,13 @@ class CPU {
     op[0xD4] = () { CALL(r['fc'] == 0); };
     // PUSH DE
     op[0xD5] = () {
-        mem.W(--r['sp'], r['d']);
-        mem.W(--r['sp'], r['e']);
+        gb.memory.W(--r['sp'], r['d']);
+        gb.memory.W(--r['sp'], r['e']);
         ticks = 16;
     };
     // SUB u8
     op[0xD6] = () {
-        r['t1'] = mem.R(r['pc']++);
+        r['t1'] = gb.memory.R(r['pc']++);
         SUB_A('t1', 8);
     };
     // RST 0x10
@@ -1181,7 +1182,7 @@ class CPU {
     // RET C
     op[0xD8] = () { RET(r['fc'] == 1); };
     // RETI
-    op[0xD9] = () { RET(true); interrupts.enabled = true; };
+    op[0xD9] = () { RET(true); gb.interrupts.enabled = true; };
     // JP C,u16
     op[0xDA] = () { JP(r['fc'] == 1); };
     // UNKNOWN
@@ -1192,25 +1193,25 @@ class CPU {
     op[0xDD] = UNKNOWN;
     // SBC A,u8
     op[0xDE] = () {
-        r['t1'] = mem.R(r['pc']++);
+        r['t1'] = gb.memory.R(r['pc']++);
         SBC_A('t1', 8);
     };
     // RST 0x18
     op[0xDF] = () { RST(0x18); };
     // LD (0xFF00+u8),A
     op[0xE0] = () {
-        mem.W(0xFF00 + mem.R(r['pc']++), r['a']);
+        gb.memory.W(0xFF00 + gb.memory.R(r['pc']++), r['a']);
         ticks = 12;
     };
     // POP HL
     op[0xE1] = () {
-        r['t1'] = mem.R(r['sp']++);
-        r['hl'] = (mem.R(r['sp']++)<<8)|r['t1'];
+        r['t1'] = gb.memory.R(r['sp']++);
+        r['hl'] = (gb.memory.R(r['sp']++)<<8)|r['t1'];
         ticks = 12;
     };
     // LD (0xFF00+C),A
     op[0xE2] = () {
-        mem.W(0xFF00 + r['c'], r['a']);
+        gb.memory.W(0xFF00 + r['c'], r['a']);
         ticks = 8;
     };
     // UNKNOWN
@@ -1219,17 +1220,17 @@ class CPU {
     op[0xE4] = UNKNOWN;
     // PUSH HL
     op[0xE5] = () {
-        mem.W(--r['sp'], r['hl'] >> 8);
-        mem.W(--r['sp'], r['hl'] & 0xFF);
+        gb.memory.W(--r['sp'], r['hl'] >> 8);
+        gb.memory.W(--r['sp'], r['hl'] & 0xFF);
         ticks = 16;
     };
     // AND u8
-    op[0xE6] = () { AND_A(mem.R(r['pc']++), 8); };
+    op[0xE6] = () { AND_A(gb.memory.R(r['pc']++), 8); };
     // RST 0x20
     op[0xE7] = () { RST(0x20); };
     // ADD SP,u8
     op[0xE8] = () {
-        r['sp'] = ADD16(r['sp'], Util.signed(mem.R(r['pc']++)));
+        r['sp'] = ADD16(r['sp'], Util.signed(gb.memory.R(r['pc']++)));
         ticks += 8;
     };
     // JP (HL)
@@ -1239,7 +1240,7 @@ class CPU {
     };
     // LD (u16),A
     op[0xEA] = () {
-        mem.W((mem.R(r['pc']+1)<<8)|mem.R(r['pc']), r['a']);
+        gb.memory.W((gb.memory.R(r['pc']+1)<<8)|gb.memory.R(r['pc']), r['a']);
         r['pc'] += 2;
         ticks = 16;
     };
@@ -1250,18 +1251,18 @@ class CPU {
     // UNKNOWN
     op[0xED] = UNKNOWN;
     // XOR u8
-    op[0xEE] = () { XOR_A(mem.R(r['pc']++), 8); };
+    op[0xEE] = () { XOR_A(gb.memory.R(r['pc']++), 8); };
     // RST 0x28
     op[0xEF] = () { RST(0x28); };
     // LD A,(0xFF00+u8)
     op[0xF0] = () {
-        r['a'] = mem.R(0xFF00 + mem.R(r['pc']++));
+        r['a'] = gb.memory.R(0xFF00 + gb.memory.R(r['pc']++));
         ticks = 12;
     };
     // POP AF
     op[0xF1] = () {
-        r['t1'] = mem.R(r['sp']++);
-        r['a'] = mem.R(r['sp']++);
+        r['t1'] = gb.memory.R(r['sp']++);
+        r['a'] = gb.memory.R(r['sp']++);
         r['fz'] = (r['t1']>>7)&1;
         r['fn'] = (r['t1']>>6)&1;
         r['fh'] = (r['t1']>>5)&1;
@@ -1271,26 +1272,26 @@ class CPU {
     
     // LD A,(0xFF00+C)
     op[0xF2] = () {
-        r['a'] = mem.R(0xFF00 + r['c']);
+        r['a'] = gb.memory.R(0xFF00 + r['c']);
         ticks = 8;
     };
     // DI
-    op[0xF3] = () { interrupts.enabled = false; ticks = 4; };
+    op[0xF3] = () { gb.interrupts.enabled = false; ticks = 4; };
     // UNKNOWN
     op[0xF4] = UNKNOWN;
     // PUSH AF
     op[0xF5] = () {
-        mem.W(--r['sp'], r['a']);
-        mem.W(--r['sp'], (r['fz']<<7)|(r['fn']<<6)|(r['fh']<<5)|(r['fc']<<4));
+        gb.memory.W(--r['sp'], r['a']);
+        gb.memory.W(--r['sp'], (r['fz']<<7)|(r['fn']<<6)|(r['fh']<<5)|(r['fc']<<4));
         ticks = 16;
     };
     // OR u8
-    op[0xF6] = () { OR_A(mem.R(r['pc']++), 8); };
+    op[0xF6] = () { OR_A(gb.memory.R(r['pc']++), 8); };
     // RST 0x30
     op[0xF7] = () { RST(0x30); };
     // LD HL,SP+u8
     op[0xF8] = () {
-        var n = mem.R(r['pc']++);
+        var n = gb.memory.R(r['pc']++);
         r['hl'] = r['sp'] + Util.signed(n);
         r['fz'] = 0;
         r['fn'] = 0;
@@ -1305,19 +1306,19 @@ class CPU {
     };
     // LD A,(u16)
     op[0xFA] = () {
-        r['a'] = mem.R((mem.R(r['pc']+1)<<8)|mem.R(r['pc']));
+        r['a'] = gb.memory.R((gb.memory.R(r['pc']+1)<<8)|gb.memory.R(r['pc']));
         r['pc'] += 2;
         ticks = 16;
     };
     // EI
-    op[0xFB] = () { interrupts.enabled = true; ticks = 4; };
+    op[0xFB] = () { gb.interrupts.enabled = true; ticks = 4; };
     // UNKNOWN
     op[0xFC] = UNKNOWN;
     // UNKNOWN
     op[0xFD] = UNKNOWN;
     // CP u8
     op[0xFE] = () {
-        r['t1'] = mem.R(r['pc']++);
+        r['t1'] = gb.memory.R(r['pc']++);
         CP_A('t1', 8);
     };
     // RST 0x38
@@ -1331,7 +1332,7 @@ class CPU {
     opcb[0x03] = () { r['e'] = RLC(r['e']); };
     opcb[0x04] = () { r['hl'] = (r['hl'] & 0x00FF) | (RLC(r['hl'] >> 8) << 8); };
     opcb[0x05] = () { r['hl'] = (r['hl'] & 0xFF00) | RLC(r['hl'] & 0xFF); };
-    opcb[0x06] = () { mem.W(r['hl'], RLC(mem.R(r['hl']))); ticks += 8; };
+    opcb[0x06] = () { gb.memory.W(r['hl'], RLC(gb.memory.R(r['hl']))); ticks += 8; };
     opcb[0x07] = () { r['a'] = RLC(r['a']); };
     opcb[0x08] = () { r['b'] = RRC(r['b']); };
     opcb[0x09] = () { r['c'] = RRC(r['c']); };
@@ -1339,7 +1340,7 @@ class CPU {
     opcb[0x0B] = () { r['e'] = RRC(r['e']); };
     opcb[0x0C] = () { r['hl'] = (r['hl'] & 0x00FF) | (RRC(r['hl'] >> 8) << 8); };
     opcb[0x0D] = () { r['hl'] = (r['hl'] & 0xFF00) | RRC(r['hl'] & 0xFF); };
-    opcb[0x0E] = () { mem.W(r['hl'], RRC(mem.R(r['hl']))); ticks += 8; };
+    opcb[0x0E] = () { gb.memory.W(r['hl'], RRC(gb.memory.R(r['hl']))); ticks += 8; };
     opcb[0x0F] = () { r['a'] = RRC(r['a']); };
     opcb[0x10] = () { r['b'] = RL(r['b']); };
     opcb[0x11] = () { r['c'] = RL(r['c']); };
@@ -1347,7 +1348,7 @@ class CPU {
     opcb[0x13] = () { r['e'] = RL(r['e']); };
     opcb[0x14] = () { r['hl'] = (r['hl'] & 0x00FF) | (RL(r['hl'] >> 8) << 8); };
     opcb[0x15] = () { r['hl'] = (r['hl'] & 0xFF00) | RL(r['hl'] & 0xFF); };
-    opcb[0x16] = () { mem.W(r['hl'], RL(mem.R(r['hl']))); ticks += 8; };
+    opcb[0x16] = () { gb.memory.W(r['hl'], RL(gb.memory.R(r['hl']))); ticks += 8; };
     opcb[0x17] = () { r['a'] = RL(r['a']); };
     opcb[0x18] = () { r['b'] = RR(r['b']); };
     opcb[0x19] = () { r['c'] = RR(r['c']); };
@@ -1355,7 +1356,7 @@ class CPU {
     opcb[0x1B] = () { r['e'] = RR(r['e']); };
     opcb[0x1C] = () { r['hl'] = (r['hl'] & 0x00FF) | (RR(r['hl'] >> 8) << 8); };
     opcb[0x1D] = () { r['hl'] = (r['hl'] & 0xFF00) | RR(r['hl'] & 0xFF); };
-    opcb[0x1E] = () { mem.W(r['hl'], RR(mem.R(r['hl']))); ticks += 8; };
+    opcb[0x1E] = () { gb.memory.W(r['hl'], RR(gb.memory.R(r['hl']))); ticks += 8; };
     opcb[0x1F] = () { r['a'] = RR(r['a']); };
     opcb[0x20] = () { SLA_R(r['b'], 8); };
     opcb[0x21] = () { SLA_R(r['c'], 8); };
@@ -1363,7 +1364,7 @@ class CPU {
     opcb[0x23] = () { SLA_R(r['e'], 8); };
     opcb[0x24] = () { r['t1'] = r['hl'] >> 8; SLA_R('t1', 8); r['hl'] = (r['t1'] << 8) | (r['hl'] & 0x00FF); };
     opcb[0x25] = () { r['t1'] = r['hl'] & 0xFF; SLA_R('t1', 8); r['hl'] = (r['hl'] & 0xFF00) | r['t1']; };
-    opcb[0x26] = () { r['t1'] = mem.R(r['hl']); SLA_R('t1', 16); mem.W(r['hl'], r['t1']); };
+    opcb[0x26] = () { r['t1'] = gb.memory.R(r['hl']); SLA_R('t1', 16); gb.memory.W(r['hl'], r['t1']); };
     opcb[0x27] = () { SLA_R(r['a'], 8); };
     opcb[0x28] = () {
       r['fc'] = r['b'] & 1; r['b'] = (r['b'] >> 1) | (r['b'] & 0x80);
@@ -1397,10 +1398,10 @@ class CPU {
       r['hl'] = (r['hl'] & 0xFF00) | l;
       ticks = 8; };
     opcb[0x2E] = () {
-      var m = mem.R(r['hl']); r['fc'] = m & 1; m = (m >> 1) | (m & 0x80);
+      var m = gb.memory.R(r['hl']); r['fc'] = m & 1; m = (m >> 1) | (m & 0x80);
       r['fn'] = 0; r['fh'] = 0;
       r['fz'] = (m == 0 ? 1 : 0);
-      mem.W(r['hl'], m);
+      gb.memory.W(r['hl'], m);
       ticks = 16; };
     opcb[0x2F] = () {
       r['fc'] = r['a'] & 1; r['a'] = (r['a'] >> 1) | (r['a'] & 0x80);
@@ -1414,17 +1415,68 @@ class CPU {
     opcb[0x35] = () { SWAP('l'); };
     opcb[0x36] = () { SWAP('hl'); };
     opcb[0x37] = () { SWAP('a'); };
-    opcb[0x38] = () { r['fc'] = r['b'] & 1; r['b'] = r['b'] >> 1; r['fn'] = 0; r['fh'] = 0; r['fz'] = (r['b'] == 0 ? 1 : 0); ticks = 8; };
-    opcb[0x39] = () { r['fc'] = r['c'] & 1; r['c'] = r['c'] >> 1; r['fn'] = 0; r['fh'] = 0; r['fz'] = (r['c'] == 0 ? 1 : 0); ticks = 8; };
-    opcb[0x3A] = () { r['fc'] = r['d'] & 1; r['d'] = r['d'] >> 1; r['fn'] = 0; r['fh'] = 0; r['fz'] = (r['d'] == 0 ? 1 : 0); ticks = 8; };
-    opcb[0x3B] = () { r['fc'] = r['e'] & 1; r['e'] = r['e'] >> 1; r['fn'] = 0; r['fh'] = 0; r['fz'] = (r['e'] == 0 ? 1 : 0); ticks = 8; };
-    opcb[0x3C] = () { var h = r['hl'] >> 8; r['fc'] = h & 1; h = h >> 1; r['fn'] = 0; r['fh'] = 0; r['fz'] = (h == 0 ? 1 : 0);
-                     r['hl'] = (h << 8) | (r['hl'] & 0x00FF); ticks = 8; };
-    opcb[0x3D] = () { var l = r['hl'] & 0xFF; r['fc'] = l & 1; l = l >> 1; r['fn'] = 0; r['fh'] = 0; r['fz'] = (l == 0 ? 1 : 0); r['hl'] = (r['hl'] & 0xFF00) | l; ticks = 8; };
-    opcb[0x3E] = () { var m = mem.R(r['hl']); r['fc'] = m & 1; m = m >> 1; r['fn'] = 0; r['fh'] = 0; r['fz'] = (m == 0 ? 1 : 0); mem.W(r['hl'], m); ticks = 16; };
-    opcb[0x3F] = () { r['fc'] = r['a'] & 1; r['a'] = r['a'] >> 1;
-      r['fn'] = 0; r['fh'] = 0; r['fz'] = (r['a'] == 0 ? 1 : 0); ticks
-        = 8; };
+    opcb[0x38] = () {
+        r['fc'] = r['b'] & 1;
+        r['b'] = r['b'] >> 1;
+        r['fn'] = r['fh'] = 0;
+        r['fz'] = (r['b'] == 0 ? 1 : 0);
+        ticks = 8;
+    };
+    opcb[0x39] = () {
+        r['fc'] = r['c'] & 1;
+        r['c'] = r['c'] >> 1;
+        r['fn'] = r['fh'] = 0;
+        r['fz'] = (r['c'] == 0 ? 1 : 0);
+        ticks = 8;
+    };
+    opcb[0x3A] = () {
+        r['fc'] = r['d'] & 1;
+        r['d'] = r['d'] >> 1;
+        r['fn'] = r['fh'] = 0;
+        r['fz'] = (r['d'] == 0 ? 1 : 0);
+        ticks = 8;
+    };
+    opcb[0x3B] = () {
+        r['fc'] = r['e'] & 1;
+        r['e'] = r['e'] >> 1;
+        r['fn'] = r['fh'] = 0;
+        r['fz'] = (r['e'] == 0 ? 1 : 0);
+        ticks = 8;
+    };
+    opcb[0x3C] = () {
+        var h = r['hl'] >> 8;
+        r['fc'] = h & 1;
+        h = h >> 1;
+        r['fn'] = r['fh'] = 0;
+        r['fz'] = (h == 0 ? 1 : 0);
+        r['hl'] = (h << 8) | (r['hl'] & 0x00FF);
+        ticks = 8;
+    };
+    opcb[0x3D] = () {
+        var l = r['hl'] & 0xFF;
+        r['fc'] = l & 1;
+        l = l >> 1;
+        r['fn'] = r['fh'] = 0;
+        r['fz'] = (l == 0 ? 1 : 0);
+        r['hl'] = (r['hl'] & 0xFF00) | l;
+        ticks = 8;
+    };
+    opcb[0x3E] = () {
+        var m = gb.memory.R(r['hl']);
+        r['fc'] = m & 1;
+        m = m >> 1;
+        r['fn'] = r['fh'] = 0;
+        r['fz'] = (m == 0 ? 1 : 0);
+        gb.memory.W(r['hl'], m);
+        ticks = 16;
+    };
+    opcb[0x3F] = () {
+        r['fc'] = r['a'] & 1;
+        r['a'] = r['a'] >> 1;
+        r['fn'] = r['fh'] = 0;
+        r['fz'] = (r['a'] == 0 ? 1 : 0);
+        ticks = 8;
+    };
 
     for (var i = 0; i < 8; ++i) {
       var o = (1 << 6) | (i << 3);
@@ -1435,7 +1487,7 @@ class CPU {
       opcb[o|3] = () { BIT('e', 1 << i, 8); };
       opcb[o|4] = () { BIT('hl', 256 << i, 8); };
       opcb[o|5] = () { BIT('hl', 1 << i, 8); };
-      opcb[o|6] = () { r['t2'] = mem.R(r['hl']); BIT('t2', 1 << i, 16); };
+      opcb[o|6] = () { r['t2'] = gb.memory.R(r['hl']); BIT('t2', 1 << i, 16); };
       opcb[o|7] = () { BIT('a', 1 << i, 8); };
       
       // RES n, r - CB 10 xxx xxx - CB 10 bit reg
@@ -1447,9 +1499,9 @@ class CPU {
       opcb[o|4] = () { RES('hl', 256 << i, 0xFFFF, 8); };
       opcb[o|5] = () { RES('hl', 1 << i, 0xFFFF, 8); };
       opcb[o|6] = () {
-          r['t2'] = mem.R(r['hl']);
+          r['t2'] = gb.memory.R(r['hl']);
           RES('t2', 1 << i, 0xFF, 16);
-          mem.W(r['hl'], r['t2']);
+          gb.memory.W(r['hl'], r['t2']);
       };
       opcb[o|7] = () { RES('a', 1 << i, 0xFF, 8); };
       
@@ -1462,9 +1514,9 @@ class CPU {
       opcb[o|4] = () { SET('hl', 256<<i, 8); };
       opcb[o|5] = () { SET('hl', 1<<i, 8); };
       opcb[o|6] = () {
-          r['t2'] = mem.R(r['hl']);
+          r['t2'] = gb.memory.R(r['hl']);
           SET('t2', 1<<i, 16);
-          mem.W(r['hl'], r['t2']);
+          gb.memory.W(r['hl'], r['t2']);
       };
       opcb[o|7] = () { SET('a', 1<<i, 8); };
     }

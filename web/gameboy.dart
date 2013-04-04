@@ -12,7 +12,7 @@ class Gameboy {
   LCD lcd = null;  
   ROM rom = null;
   Memory memory = null;
-  Interrupts interrupts = new Interrupts();
+  Interrupts interrupts = null;
   CPU cpu = null;
   Input input = new Input();
   Timers timers;
@@ -27,7 +27,8 @@ class Gameboy {
     rom = new ROM('roms/$filename');
     memory = new Memory(rom);
     timers = new Timers(memory);
-    cpu = new CPU(memory, interrupts);
+    cpu = new CPU(this);
+    interrupts = new Interrupts(this);
     lcd = new LCD(canvas, memory);
     run();
   }
