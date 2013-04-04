@@ -46,7 +46,7 @@ class CPU {
   }
 
   void UNKNOWN() {
-    // TODO: report error
+    print("UNKNOWN");
     assert(false);
   }
   
@@ -290,8 +290,10 @@ class CPU {
   void HALT() {
     if (gb.interrupts.enabled)
       gb.interrupts.halt = true;
-    else
-      assert(false); // 'HALT instruction with interrupts disabled.');
+    else {
+      print('HALT with interrupts disabled');
+      assert(false);
+    }
     ticks = 4;
   }
 
@@ -649,6 +651,7 @@ class CPU {
     };
     // STOP
     op[0x10] = () {
+        print('STOP');
         assert(false);
         ticks = 4;
     };
@@ -1362,14 +1365,14 @@ class CPU {
     opcb[0x1D] = () { r['hl'] = (r['hl'] & 0xFF00) | RR(r['hl'] & 0xFF); };
     opcb[0x1E] = () { gb.memory.W(r['hl'], RR(gb.memory.R(r['hl']))); ticks += 8; };
     opcb[0x1F] = () { r['a'] = RR(r['a']); };
-    opcb[0x20] = () { SLA_R(r['b'], 8); };
-    opcb[0x21] = () { SLA_R(r['c'], 8); };
-    opcb[0x22] = () { SLA_R(r['d'], 8); };
-    opcb[0x23] = () { SLA_R(r['e'], 8); };
+    opcb[0x20] = () { SLA_R('b', 8); };
+    opcb[0x21] = () { SLA_R('c', 8); };
+    opcb[0x22] = () { SLA_R('d', 8); };
+    opcb[0x23] = () { SLA_R('e', 8); };
     opcb[0x24] = () { r['t1'] = r['hl'] >> 8; SLA_R('t1', 8); r['hl'] = (r['t1'] << 8) | (r['hl'] & 0x00FF); };
     opcb[0x25] = () { r['t1'] = r['hl'] & 0xFF; SLA_R('t1', 8); r['hl'] = (r['hl'] & 0xFF00) | r['t1']; };
     opcb[0x26] = () { r['t1'] = gb.memory.R(r['hl']); SLA_R('t1', 16); gb.memory.W(r['hl'], r['t1']); };
-    opcb[0x27] = () { SLA_R(r['a'], 8); };
+    opcb[0x27] = () { SLA_R('a', 8); };
     opcb[0x28] = () {
       r['fc'] = r['b'] & 1; r['b'] = (r['b'] >> 1) | (r['b'] & 0x80);
       r['fn'] = 0; r['fh'] = 0; r['fz'] = (r['b'] == 0 ? 1 : 0);

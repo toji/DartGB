@@ -7,7 +7,6 @@ class ROM {
     var completer = new Completer();
     HttpRequest.request(filename, responseType: "arraybuffer")
         .then((req) {
-            assert(req.response.byteLength == 0x8000);  // limited to 32kb for now.
             var rom = new ROM(new Uint8Array.fromBuffer(req.response));
             completer.complete(rom);
         })
