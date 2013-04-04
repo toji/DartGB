@@ -150,7 +150,7 @@ class LCD {
   }
   
   void present() {
-    gl.viewport(0, 0, 256, 256);
+    gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
     
     //print("Presenting w/ Scroll ($ScrollX, $ScrollY)");
     
