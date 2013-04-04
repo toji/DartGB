@@ -152,9 +152,7 @@ class LCD {
   void updateTile(int tileIndex) {
     int tileOffset = 0x8000 + (tileIndex * 16);
     int bufferOffset = 0;
-    
-    print("Updating Tile $tileIndex (0x${tileOffset.toRadixString(16)})");
-    
+
     // Tiles are read one row at a time
     for(int i = 0; i < 8; ++i) {
       int rowLow = memory.R(tileOffset++);
@@ -163,9 +161,7 @@ class LCD {
       for(int j = 0; j < 8; ++j) {
         int tileValue = ((rowLow >> j) & 0x01) + ((rowHigh >> j) & 0x02);
         //int tileValue = (i + j) % 4; // For Great Debugging!
-        
-        print("($i, $j) == $tileValue");
-        
+
         if(tileValue == 0) {
           _tileByteBuffer[bufferOffset++] = 255;
           _tileByteBuffer[bufferOffset++] = 255;
