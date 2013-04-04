@@ -224,7 +224,7 @@ class Memory {
     }
     
     // Writing to ROM?
-    else if (addr < 0x800) {
+    else if (addr < 0x8000) {
       switch (ROM_cartType) {
         case _ROM_ONLY: 
           return;

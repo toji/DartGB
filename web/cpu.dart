@@ -104,8 +104,8 @@ class CPU {
       r['t1'] = gb.memory.R(r['hl']);
       gb.memory.W(r['hl'], ((r['t1']<<4)|(r['t1']>>4)) & 0xFF);
     } else {
-      var r = r[reg];
-      r[reg] = ((r<<4) | (r>>4)) & 0xFF;
+      var new_r = r[reg];
+      r[reg] = ((new_r<<4) | (new_r>>4)) & 0xFF;
     }
     ticks = 8;
   }
