@@ -6,7 +6,6 @@ typedef void OpFunc();
 class CPU {
   Memory mem = null;
   Interrupts interrupts = null;
-  bool halt = false;
   int ticks = 0;
   
   Uint16List daaTable = new Uint16List(256 * 8);
@@ -37,7 +36,7 @@ class CPU {
   }
   
   void next() {
-    if (halt)
+    if (interrupts.halt)
       ticks = 4;
     else {
       var pc = r['pc'];
@@ -288,7 +287,7 @@ class CPU {
 
   void HALT() {
     if (interrupts.enabled)
-      halt = true;
+      interrupts.halt = true;
     else
       assert(false); // 'HALT instruction with interrupts disabled.');
     ticks = 4;
