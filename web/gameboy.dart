@@ -2,7 +2,6 @@ part of dartgb;
 
 class Gameboy {
   bool paused = false;
-  bool endFrame;
 
   int seconds;
   int frames;
@@ -24,8 +23,7 @@ class Gameboy {
   Gameboy(String filename, CanvasElement canvas)
       : seconds = 0,
         frames = 0,
-        paused = true,
-        endFrame = true {
+        paused = true {
     rom = new ROM('roms/$filename');
     memory = new Memory(rom);
     timers = new Timers(memory);
@@ -54,8 +52,8 @@ class Gameboy {
   }
 
   void frame(Timer t) {
-    endFrame = false;
-    while (!(endFrame || paused)) {
+    timers.endFrame = false;
+    while (!(timers.endFrame || paused)) {
       cpu.next();
       interrupts.run();
       timers.control();
@@ -64,11 +62,10 @@ class Gameboy {
   }
 
   void showFPS(Timer t) {
-    // TODO
-    // frames += FPS;
+    frames += timers.FPS;
     ++seconds;
     // TODO: set status to fps
-    // FPS = 0;
+    timers.FPS = 0;
     bankSwitchCount = 0;
   }
 }
