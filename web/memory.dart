@@ -5,7 +5,6 @@ class Memory {
 
   // Memory and the cartridge's ROM.
   Uint8List _mem = new Uint8List(0x10000);
-  Uint8List _rom = null;
   int MBC1mode = 0;
   int ROM_bankOffset = 0;
   int ROM_banks = 0;
@@ -52,7 +51,7 @@ class Memory {
     }
   }
   
-  int get ROM_cartType => _rom[0x147];
+  int get ROM_cartType => gb.rom.data[0x147];
   
   // These get updated by Timers.
   int set DIV(int v)  => _mem[0xFF04] = v;
@@ -74,7 +73,6 @@ class Memory {
   
   Memory(this.gb) {
     _mem.setRange(0, 0x8000, gb.rom.data);
-    _rom = new Uint8List.view(gb.rom.data.buffer);
     
     var ROMbanks = [];
     ROMbanks[0x00] = 2;
@@ -87,7 +85,7 @@ class Memory {
     ROMbanks[0x52] = 72;
     ROMbanks[0x53] = 80;
     ROMbanks[0x54] = 96;
-    ROM_banks = ROMbanks[_rom[0x148]];
+    ROM_banks = ROMbanks[gb.rom.data[0x148]];
     
     var RAMbanks = [];
     RAMbanks[0] = 0;
@@ -95,7 +93,7 @@ class Memory {
     RAMbanks[2] = 2; // docs say 1?
     RAMbanks[3] = 4;
     RAMbanks[4] = 16;
-    RAM_banks = RAMbanks[_rom[0x149]];
+    RAM_banks = RAMbanks[gb.rom.data[0x149]];
   }
   
   void reset() {
@@ -153,7 +151,7 @@ class Memory {
       case 4:
       case 5:
       case 6:
-      case 7: return _rom[ROM_bankOffset + addr];
+      case 7: return gb.rom.data[ROM_bankOffset + addr];
       default: return _mem[addr];
     }
   }
