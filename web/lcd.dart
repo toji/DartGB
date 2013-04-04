@@ -73,9 +73,13 @@ class LCD {
   // 0xFF40  LCD and GPU control Read/write
   // 0xFF47  Background palette  Write only
   
-  int get ScrollX => memory.R(0xFF42);
-  int get ScrollY => memory.R(0xFF43);
-  int get ScanLine => memory.R(0xFF44);
+  int get ScrollX => memory.SCX;
+  int get ScrollY => memory.SCY;
+  int get ScanLine => memory.LY;
+  
+  int Pallet(int index) {
+    return (memory.BGP >> (index * 2)) & 0x3;
+  }
 
   Uint8Array _scanline = new Uint8Array(512);
   void renderScan() {
@@ -95,6 +99,7 @@ class LCD {
       int rowHigh = memory.R(tileOffset+1) << 1;
       for(int i = 0; i < 8; ++i) {
         int tileValue = ((rowLow >> i) & 0x01) + ((rowHigh >> i) & 0x02);
+        tileValue = Pallet(tileValue);
         //int tileValue = (i + j) % 4; // For Great Debugging!
         
         // TODO: Pallet lookup
@@ -123,7 +128,7 @@ class LCD {
     
     //print("Clearing Scanline $ScanLine");
     
-    _scanline.forEach((index) => _scanline[index] = 0);
+    _scanline.forEach((el) => el = 0);
     gl.bindTexture(GL.TEXTURE_2D, _frontBuffer.texture);
     gl.texSubImage2D(GL.TEXTURE_2D, 0, 0, y, 256, 1, GL.LUMINANCE_ALPHA, GL.UNSIGNED_BYTE, _scanline);
   }
