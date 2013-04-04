@@ -91,8 +91,13 @@ class LCD {
   }
   
   int BackgroundTile(int index) {
-    int tile = memory.R(BackgroundOffset + index);
-    return BackgroundTileSet == 1 && tile < 128 ? tile += 256 : tile;
+    int tile0 = memory.R(BackgroundOffset + index);
+    
+    if(BackgroundTileSet == 1) {
+      int tile1 = Util.signed(tile0);
+      return tile1 < 128 ? tile1 += 256 : tile1;
+    }
+    return tile0;
   }
 
   Uint8Array _scanline = new Uint8Array(512);
