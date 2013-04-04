@@ -131,7 +131,7 @@ class LCD {
         int tileValue = ((rowLow >> i) & 0x01) + ((rowHigh >> i) & 0x02);
         tileValue = Pallet(tileValue);
         
-        SetScanline(x + i, tileValue);
+        SetScanline((x * 8) + i, tileValue);
       }
     }
     
