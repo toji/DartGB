@@ -74,7 +74,7 @@ class Memory {
   Memory(this.gb) {
     _mem.setRange(0, 0x8000, gb.rom.data);
     
-    var ROMbanks = [];
+    var ROMbanks = new List<int>(100);
     ROMbanks[0x00] = 2;
     ROMbanks[0x01] = 4;
     ROMbanks[0x02] = 8;
@@ -87,7 +87,7 @@ class Memory {
     ROMbanks[0x54] = 96;
     ROM_banks = ROMbanks[gb.rom.data[0x148]];
     
-    var RAMbanks = [];
+    var RAMbanks = new List<int>(5);
     RAMbanks[0] = 0;
     RAMbanks[1] = 1;
     RAMbanks[2] = 2; // docs say 1?
