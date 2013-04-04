@@ -24,7 +24,7 @@ class Gameboy {
       : seconds = 0,
         frames = 0,
         paused = true {
-    rom = new ROM('roms/$filename');
+    rom = new ROM('../roms/$filename');
     memory = new Memory(rom);
     timers = new Timers(memory);
     cpu = new CPU(this);
