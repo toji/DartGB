@@ -56,13 +56,13 @@ class LCD {
     gl.bindBuffer(GL.ARRAY_BUFFER, _quadBuffer);
     
     Float32Array verts = new Float32Array.fromList([
-       -1.0,  -1.0,  0.0, 1.0,
-       1.0,  -1.0,  1.0, 1.0,
-       1.0,  1.0,  1.0, 0.0,
+       -1.0,  -1.0,  1.0, 1.0,
+       1.0,  -1.0,  0.0, 1.0,
+       1.0,  1.0,  0.0, 0.0,
       
-       -1.0,  -1.0,  0.0, 1.0,
-       1.0,  1.0,  1.0, 0.0,
-       -1.0,  1.0,  0.0, 0.0
+       -1.0,  -1.0,  1.0, 1.0,
+       1.0,  1.0,  0.0, 0.0,
+       -1.0,  1.0,  1.0, 0.0
     ]);
     
     gl.bufferData(GL.ARRAY_BUFFER, verts, GL.STATIC_DRAW);
