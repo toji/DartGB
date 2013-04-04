@@ -147,7 +147,7 @@ class LCD {
     gl.drawArrays(GL.TRIANGLES, 0, 6);
   }
   
-  Uint8Array _tileByteBuffer = new Uint8Array(256);
+  Uint8Array _tileByteBuffer = new Uint8Array(128);
   
   void updateTile(int tileIndex) {
     int tileOffset = 0x8000 + (tileIndex * 16);
@@ -164,22 +164,14 @@ class LCD {
 
         if(tileValue == 0) {
           _tileByteBuffer[bufferOffset++] = 255;
-          _tileByteBuffer[bufferOffset++] = 255;
-          _tileByteBuffer[bufferOffset++] = 255;
           _tileByteBuffer[bufferOffset++] = 0;
         } else if(tileValue == 1) {
-          _tileByteBuffer[bufferOffset++] = 192;
-          _tileByteBuffer[bufferOffset++] = 192;
           _tileByteBuffer[bufferOffset++] = 192;
           _tileByteBuffer[bufferOffset++] = 255;
         } else if(tileValue == 2) {
           _tileByteBuffer[bufferOffset++] = 96;
-          _tileByteBuffer[bufferOffset++] = 96;
-          _tileByteBuffer[bufferOffset++] = 96;
           _tileByteBuffer[bufferOffset++] = 255;
         } else {
-          _tileByteBuffer[bufferOffset++] = 0;
-          _tileByteBuffer[bufferOffset++] = 0;
           _tileByteBuffer[bufferOffset++] = 0;
           _tileByteBuffer[bufferOffset++] = 255;
         }
@@ -190,7 +182,7 @@ class LCD {
     int tileY = 8 * (tileIndex % 128);
     
     gl.bindTexture(GL.TEXTURE_2D, _tiles.texture);
-    gl.texSubImage2D(GL.TEXTURE_2D, 0, tileX, tileY, 8, 8, GL.RGBA, GL.UNSIGNED_BYTE, _tileByteBuffer);
+    gl.texSubImage2D(GL.TEXTURE_2D, 0, tileX, tileY, 8, 8, GL.LUMINANCE_ALPHA, GL.UNSIGNED_BYTE, _tileByteBuffer);
   }
   
   void blitTile(RenderTarget target, int tileIndex, int x, int y) {
