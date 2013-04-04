@@ -9,8 +9,9 @@ class Timers {
   bool endFrame = false;
 
   Memory memory;
+  LCD lcd;
   
-  Timers(this.memory);
+  Timers(this.memory, this.lcd);
   
   void control() {
     // DIV control.
@@ -73,9 +74,9 @@ class Timers {
       memory.IF |= 2;
     }
     if (memory.LCDC_displayOn) {
-      // TODO: framebouffer to lcd.
+      lcd.present();
     } else {
-      // TODO: display blank screen?
+      lcd.clear();
     }
   }
   
@@ -94,9 +95,9 @@ class Timers {
     if (memory.STAT_mode != 3) {
       memory.STAT_mode = 3;
       if (memory.LCDC_displayOn) {
-        // TODO: draw scanline.
+        lcd.renderScan();
       } else {
-        // TODO: clear scanline.
+        lcd.clearScan();
       }
     }
   }
