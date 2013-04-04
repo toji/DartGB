@@ -31,10 +31,10 @@ class Gameboy {
         input = new Input(this);
         memory = new Memory(this);
         memory.reset();
-        timers = new Timers(memory);
+        lcd = new LCD(canvas, memory);
+        timers = new Timers(memory, lcd);
         cpu = new CPU(this);
         interrupts = new Interrupts(this);
-        lcd = new LCD(canvas, memory);
         run();
     });
   }

@@ -6,12 +6,8 @@ class LCD {
   CanvasElement _canvas;
   Memory memory;
   
-  RenderTarget _frontBuffer;
-  RenderTarget _background;
-  TextureHelper _tiles;
-  
+  TextureHelper _frontBuffer;
   GL.Buffer _quadBuffer;
-  
   ShaderHelper _blitShader;
   
   String _blitVS = """
@@ -19,19 +15,10 @@ class LCD {
     attribute vec2 TexCoord0;
 
     varying vec2 vTexCoord0;
-    
-    uniform mat3 clipMat;
-    uniform mat3 imgMat;
-    uniform vec2 srcOffset;
-    uniform vec2 srcScale;
-    uniform vec2 dstOffset;
-    uniform vec2 dstScale; 
 
     void main() {
-        vec2 srcBlitPos = (TexCoord0 * srcScale) + srcOffset;
-        vTexCoord0 = (imgMat * vec3(srcBlitPos, 1.0)).xy;
-        vec2 dstBlitPos = (Position * dstScale) + dstOffset;
-        gl_Position = vec4(clipMat * vec3(dstBlitPos, 1.0), 1.0);
+        vTexCoord0 = TexCoord0;
+        gl_Position = vec4(Position, 1.0, 1.0);
     }
   """;
   
@@ -62,56 +49,84 @@ class LCD {
     gl.clearColor(0.0, 0.0, 0.0, 0.0);
     
     // Allocate the front buffer
-    _frontBuffer = new RenderTarget(gl, 256, 256, true);
-    _background = new RenderTarget(gl, 512, 512, true);
-    _tiles = new TextureHelper(gl, 24, 1024);
-    
+    _frontBuffer = new TextureHelper(gl, 256, 256, false);
     _blitShader = new ShaderHelper(gl, _blitVS, _blitFS);
     
     _quadBuffer = gl.createBuffer();
     gl.bindBuffer(GL.ARRAY_BUFFER, _quadBuffer);
     
     Float32Array verts = new Float32Array.fromList([
-       0.0,  0.0,  0.0, 1.0,
-       1.0,  0.0,  1.0, 1.0,
+       -1.0,  -1.0,  0.0, 1.0,
+       1.0,  -1.0,  1.0, 1.0,
        1.0,  1.0,  1.0, 0.0,
       
-       0.0,  0.0,  0.0, 1.0,
+       -1.0,  -1.0,  0.0, 1.0,
        1.0,  1.0,  1.0, 0.0,
-       0.0,  1.0,  0.0, 0.0
+       -1.0,  1.0,  0.0, 0.0
     ]);
     
     gl.bufferData(GL.ARRAY_BUFFER, verts, GL.STATIC_DRAW);
-
-    for(int i = 0; i < 384; ++i) {
-      updateTile(i);
-    }
     
-    blitTile(_background, 0, 0, 0);
-    blitTile(_background, 16, 8, 8);
-    blitTile(_background, 32, 16, 16);
-    blitTile(_background, 64, 32, 32);
-    blitTile(_background, 128, 130, 130);
-    
-    blit(_tiles, _background, 0, 0, 0, 128, 24, 256);
-    
-    blit(_tiles, null, 0, 0, 512, 0, 24, 1024); 
-    
-    present(64, 64);
+    present();
   }
   
-  void blit(TextureHelper source, RenderTarget dest, int srcX, int srcY, int dstX, int dstY, int width, int height) {
-    int dstWidth = dest != null ? dest.width : gl.drawingBufferWidth;
-    int dstHeight = dest != null ? dest.height : gl.drawingBufferHeight;
+  // 0xFF40 LCD and GPU control Read/write
+  // 0xFF42  Scroll-Y  Read/write
+  // 0xFF43  Scroll-X  Read/write
+  // 0xFF44  Current scan line Read only
+  // 0xFF47  Background palette  Write only
+
+  Uint8Array _scanline = new Uint8Array(512);
+  void renderScan() {
+    int y = 0;
+    int scanlineOffset = 0;
     
-    if(dest != null) {
-      gl.bindTexture(GL.TEXTURE_2D, null);
-      gl.bindFramebuffer(GL.FRAMEBUFFER, dest.framebuffer);
-    } else {
-      gl.bindFramebuffer(GL.FRAMEBUFFER, null);
+    int backgroundMapOffset = 0x9800; // for looping through the tile maps
+    
+    for(int x = 0; x < 32; ++x) {
+      int backgroundIndex = x + ((y / 8).toInt() * 32);
+      int tileIndex = memory.R(backgroundMapOffset + backgroundIndex);
+      int tileOffset = 0x8000 + (tileIndex * 16) + ((y % 8) * 2);
+      
+      int rowLow = memory.R(tileOffset);
+      int rowHigh = memory.R(tileOffset+1) << 1;
+      for(int i = 0; i < 8; ++i) {
+        int tileValue = ((rowLow >> i) & 0x01) + ((rowHigh >> i) & 0x02);
+        //int tileValue = (i + j) % 4; // For Great Debugging!
+        
+        // TODO: Pallet lookup
+        if(tileValue == 0) {
+          _scanline[scanlineOffset++] = 255;
+          _scanline[scanlineOffset++] = 0;
+        } else if(tileValue == 1) {
+          _scanline[scanlineOffset++] = 192;
+          _scanline[scanlineOffset++] = 255;
+        } else if(tileValue == 2) {
+          _scanline[scanlineOffset++] = 96;
+          _scanline[scanlineOffset++] = 255;
+        } else {
+          _scanline[scanlineOffset++] = 0;
+          _scanline[scanlineOffset++] = 255;
+        }
+      }
     }
     
-    gl.viewport(0, 0, dstWidth, dstHeight);
+    gl.bindTexture(GL.TEXTURE_2D, _frontBuffer.texture);
+    gl.texSubImage2D(GL.TEXTURE_2D, 0, 0, y, 256, 1, GL.LUMINANCE_ALPHA, GL.UNSIGNED_BYTE, _scanline);
+  }
+  
+  void clearScan() {
+    int y = 0;
+    
+    _scanline.forEach((index) => _scanline[index] = 0);
+    gl.bindTexture(GL.TEXTURE_2D, _frontBuffer.texture);
+    gl.texSubImage2D(GL.TEXTURE_2D, 0, 0, y, 256, 1, GL.LUMINANCE_ALPHA, GL.UNSIGNED_BYTE, _scanline);
+  }
+  
+  void present() {
+    int ScrollX = 0;
+    int SCrollY = 0;
+    gl.viewport(0, 0, 256, 256);
     
     gl.useProgram(_blitShader.program);
     
@@ -123,127 +138,12 @@ class LCD {
     
     gl.activeTexture(GL.TEXTURE0);
     gl.uniform1i(_blitShader.uniforms["texture0"], 0);
-    gl.bindTexture(GL.TEXTURE_2D, source.texture);
-    
-    _clipMat[0] = 2.0 / dstWidth;
-    _clipMat[4] = -2.0 / dstHeight;
-    _clipMat[6] = -1.0;
-    _clipMat[7] = 1.0;
-    _clipMat[8] = 1.0;
-    
-    _imgMat[0] = 1.0 / source.width;
-    _imgMat[4] = -1.0 / source.height;
-    _imgMat[6] = 0.0;
-    _imgMat[7] = 0.0;
-    _imgMat[8] = 1.0;
-    
-    gl.uniformMatrix3fv(_blitShader.uniforms["clipMat"], false, _clipMat);
-    gl.uniformMatrix3fv(_blitShader.uniforms["imgMat"], false, _imgMat);
-    gl.uniform2f(_blitShader.uniforms["dstOffset"], dstX, dstY);
-    gl.uniform2f(_blitShader.uniforms["dstScale"], width, height);
-    gl.uniform2f(_blitShader.uniforms["srcOffset"], srcX, srcY);
-    gl.uniform2f(_blitShader.uniforms["srcScale"], width, height);
+    gl.bindTexture(GL.TEXTURE_2D, _frontBuffer.texture);
     
     gl.drawArrays(GL.TRIANGLES, 0, 6);
   }
-  
-  Uint8Array _tileByteBuffer = new Uint8Array(256);
-  
-  void updateTile(int tileIndex) {
-    int tileOffset = 0x8000 + (tileIndex * 16);
-    int bufferOffset = 0;
 
-    // Tiles are read one row at a time
-    for(int i = 0; i < 8; ++i) {
-      int rowLow = memory.R(tileOffset++);
-      int rowHigh = memory.R(tileOffset++) << 1;
-      
-      for(int j = 0; j < 8; ++j) {
-        int tileValue = ((rowLow >> j) & 0x01) + ((rowHigh >> j) & 0x02);
-        //int tileValue = (i + j) % 4; // For Great Debugging!
-
-        if(tileValue == 0) {
-          _tileByteBuffer[bufferOffset++] = 255;
-          _tileByteBuffer[bufferOffset++] = 255;
-          _tileByteBuffer[bufferOffset++] = 255;
-          _tileByteBuffer[bufferOffset++] = 0;
-        } else if(tileValue == 1) {
-          _tileByteBuffer[bufferOffset++] = 192;
-          _tileByteBuffer[bufferOffset++] = 192;
-          _tileByteBuffer[bufferOffset++] = 192;
-          _tileByteBuffer[bufferOffset++] = 255;
-        } else if(tileValue == 2) {
-          _tileByteBuffer[bufferOffset++] = 96;
-          _tileByteBuffer[bufferOffset++] = 96;
-          _tileByteBuffer[bufferOffset++] = 96;
-          _tileByteBuffer[bufferOffset++] = 255;
-        } else {
-          _tileByteBuffer[bufferOffset++] = 0;
-          _tileByteBuffer[bufferOffset++] = 0;
-          _tileByteBuffer[bufferOffset++] = 0;
-          _tileByteBuffer[bufferOffset++] = 255;
-        }
-      }
-    }
-    
-    int tileX = 8 * (tileIndex / 128).toInt();
-    int tileY = 8 * (tileIndex % 128);
-    
-    gl.bindTexture(GL.TEXTURE_2D, _tiles.texture);
-    gl.texSubImage2D(GL.TEXTURE_2D, 0, tileX, tileY, 8, 8, GL.RGBA, GL.UNSIGNED_BYTE, _tileByteBuffer);
-  }
-  
-  void blitTile(RenderTarget target, int tileIndex, int x, int y) {
-    int tileX = 8 * (tileIndex / 128).toInt();
-    int tileY = 8 * (tileIndex % 128);
-    blit(_tiles, target, tileX, tileY, x, y, 8, 8);  
-  }
-  
-  void blitBackgroundTile(int tileIndex, int backgroundIndex) {
-    // TODO: This may be wrong! Possibly need to wrap at 32 tiles instead of 64
-    int backgroundX = (tileIndex % 64) * 8;
-    int backgroundY = (tileIndex / 64).toInt() * 8;
-    blitTile(_background, tileIndex, backgroundX, backgroundY);
-  }
-  
-  // Generally following the API used by jsgb.
-  void updateBackground() {
-    int tile0 = 0; // tile index for tiledata at 8000+(unsigned byte)
-    int tile1 = 1; // tile index for tiledata at 8800+(signed byte)
-    int addr = 0x9800; // for looping through the tile maps
-    
-    int col = 0;
-    int row = 0;
-    int z = 0; // Pixel within a single row
-    int rowOffset = 0; // row within a tile
-    List<int> tileline = null;
-    List<int> backline = null;
-    
-    for (int i = 0; i < 384; i++) {
-      if(memory.updatedTiles[i]) {
-        updateTile(i);
-      }
-    }
-    
-    for (int i = 0; i < 2048; i++) {
-      tile0 = memory.R(addr++);
-      tile1 = 256 + Util.signed(tile0);
-      
-      if (memory.updatedTiles[tile0] || memory.updatedBackground[i]) {
-        blitBackgroundTile(tile0, i);
-      }
-      if (memory.updatedTiles[tile1] || memory.updatedBackground[i]) {
-        blitBackgroundTile(tile1, i);
-      }
-      memory.updatedBackground[i] = false;
-      if ((col+= 8) >= 256) {
-        col = 0;
-        row += 8;
-      }
-    }
-  }
-  
-  void present(int ScrollX, int ScrollY) {
-    blit(_background.texture, null, ScrollX, ScrollY, 0, 0, 512, 512);
+  void clear() {
+    gl.clear(GL.COLOR_BUFFER_BIT);
   }
 }

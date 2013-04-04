@@ -14,12 +14,7 @@ class TextureHelper {
     gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MIN_FILTER, GL.NEAREST);
     gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_WRAP_S, wrap ? GL.REPEAT : GL.CLAMP_TO_EDGE);
     gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_WRAP_T, wrap ? GL.REPEAT : GL.CLAMP_TO_EDGE);
-    gl.texImage2D(GL.TEXTURE_2D, 0, GL.RGBA, width, height, 0, GL.RGBA, GL.UNSIGNED_BYTE, null);
+    gl.texImage2D(GL.TEXTURE_2D, 0, GL.LUMINANCE_ALPHA, width, height, 0, GL.LUMINANCE_ALPHA, GL.UNSIGNED_BYTE, null);
     gl.bindTexture(GL.TEXTURE_2D, null);
-  }
-  
-  void setTextureData() {
-    gl.bindTexture(GL.TEXTURE_2D, texture);
-    gl.texImage2D(GL.TEXTURE_2D, 0, GL.RGBA, width, height, 0, GL.RGBA, GL.UNSIGNED_BYTE, null);
   }
 }
