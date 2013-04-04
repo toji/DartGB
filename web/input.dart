@@ -158,35 +158,35 @@ class Input {
     switch (e.keyCode) {
       case 40:  // down
         onButtonDown(BUTTON_DOWN);
-        e.defaultPrevented = true;
+        e.preventDefault();
         break;
       case 38:  // up
         onButtonDown(BUTTON_UP);
-        e.defaultPrevented = true;
+        e.preventDefault();
         break;
       case 37:  // left
         onButtonDown(BUTTON_LEFT);
-        e.defaultPrevented = true;
+        e.preventDefault();
         break;
       case 39:  // right
         onButtonDown(BUTTON_RIGHT);
-        e.defaultPrevented = true;
+        e.preventDefault();
         break;
       case 65:  // start
         onButtonDown(BUTTON_START);
-        e.defaultPrevented = true;
+        e.preventDefault();
         break;
       case 83:  // select
         onButtonDown(BUTTON_SELECT);
-        e.defaultPrevented = true;
+        e.preventDefault();
         break;
       case 90:  // B
         onButtonDown(BUTTON_B);
-        e.defaultPrevented = true;
+        e.preventDefault();
         break;
       case 88:  // 
         onButtonDown(BUTTON_A);
-        e.defaultPrevented = true;
+        e.preventDefault();
         break;
     }
   }
@@ -195,35 +195,35 @@ class Input {
     switch (e.keyCode) {
       case 40:  // down
         onButtonUp(BUTTON_DOWN);
-        e.defaultPrevented = true;
+        e.preventDefault();
         break;
       case 38:  // up
         onButtonUp(BUTTON_UP);
-        e.defaultPrevented = true;
+        e.preventDefault();
         break;
       case 37:  // left
         onButtonUp(BUTTON_LEFT);
-        e.defaultPrevented = true;
+        e.preventDefault();
         break;
       case 39:  // right
         onButtonUp(BUTTON_RIGHT);
-        e.defaultPrevented = true;
+        e.preventDefault();
         break;
       case 65:  // start
         onButtonUp(BUTTON_START);
-        e.defaultPrevented = true;
+        e.preventDefault();
         break;
       case 83:  // select
         onButtonUp(BUTTON_SELECT);
-        e.defaultPrevented = true;
+        e.preventDefault();
         break;
       case 90:  // B
         onButtonUp(BUTTON_B);
-        e.defaultPrevented = true;
+        e.preventDefault();
         break;
       case 88:  // A
         onButtonUp(BUTTON_A);
-        e.defaultPrevented = true;
+        e.preventDefault();
         break;
     }
   }
