@@ -109,7 +109,89 @@ class CPU {
     }
     ticks = 8;
   }
-
+  
+  void ADD_A(String reg, int t) {
+    r['fh'] = ((r['a'] & 0x0F) + (r[reg] & 0x0F)) > 0x0F ? 1 : 0;
+    r['fc'] = ((r['a'] & 0xFF) + (r[reg] & 0xFF)) > 0xFF ? 1 : 0;
+    r['a'] = (r['a'] + r[reg]) & 0xFF;
+    r['fz'] = (r['a'] == 0 ? 1 : 0);
+    r['fn'] = 0;
+    ticks = t;
+  }
+  
+  void ADC_A(String reg, int t) {
+    r['t2'] = r['fc'];
+    r['fh'] = ((r['a'] & 0x0F) + (r[reg] & 0x0F) + r['t2']) > 0x0F ? 1 : 0;
+    r['fc'] = ((r['a'] & 0xFF) + (r[reg] & 0xFF) + r['t2']) > 0xFF ? 1 : 0;
+    r['a'] = (r['a'] + r[reg] + r['t2']) & 0xFF;
+    r['fz'] = (r['a'] == 0 ? 1 : 0);
+    r['fn'] = 0;
+    ticks = t;
+  }
+  
+  void SUB_A(String reg, int t) {
+    if (reg == 'a') {
+      r['fh'] = 0;
+      r['fc'] = 0;
+      r['a'] = 0;
+      r['fz'] = 1;
+    } else {
+      r['fh'] = (r['a'] & 0x0F) < (r[reg] & 0x0F) ? 1 : 0;
+      r['fc'] = (r['a'] & 0xFF) < (r[reg] & 0xFF) ? 1 : 0;
+      r['a'] = (r['a'] - r[reg]) & 0xFF;
+      r['fz'] = (r['a'] == 0 ? 1 : 0);
+    }
+    r['fn'] = 1;
+    ticks = t;
+  }
+  
+  void SBC_A(String reg, int t) {
+    r['t2'] = r['fc'];
+    r['fh'] = (r['a'] & 0x0F) < ((r[reg] & 0x0F) + r['t2']) ? 1 : 0;
+    r['fc'] = (r['a'] & 0xFF) < ((r[reg] & 0xFF) + r['t2']) ? 1 : 0;
+    r['a'] = (r['a'] - r[reg] - r['t2']) & 0xFF;
+    r['fz'] = (r['a'] == 0 ? 1 : 0);
+    r['fn'] = 1;
+    ticks = t;
+  }
+  
+  void AND_A(String reg, int t) {
+    if (reg != 'a')
+      r['a'] &= r[reg];
+    r['fz'] = r['a'] == 0 ? 1 : 0;
+    r['fh'] = 1;
+    r['fn'] = r['fc'] = 0;
+    ticks = t;
+  }
+  
+  void XOR_A(String reg, int t) {
+    if (reg != 'a') {
+      r['a'] = 0;
+      r['fz'] = 1;
+    } else {
+      r['a'] ^= r[reg];
+      r['fz'] = r['a'] == 0 ? 1 : 0;
+    }
+    r['fh'] = r['fn'] = r['fc'] = 0;
+    ticks = t;
+  }
+  
+  void CP_A(String reg, int t) {
+    r['fz'] = r['a'] == r[reg] ? 1 : 0;
+    r['fn'] = 1;
+    r['fc'] = r['a'] < r[reg] ? 1 : 0;
+    r['fh'] = (r['a'] & 0x0F) < (r[reg] & 0x0F) ? 1 : 0;
+    ticks = t;
+  }
+  
+  void OR_A(String reg, int t) {
+    if (reg != 'a')
+      r['a'] |= r[reg];
+    r['fz'] = r['a'] == 0 ? 1 : 0;
+    r['fh'] = r['fn'] = r['fc'] = 0;
+    ticks = t;    
+  }
+  
   void SLA_R(String reg, int t) {
     r['fc'] = (r[reg] >> 7) & 1;
     r[reg] = (r[reg] << 1) & 0xFF;
@@ -885,251 +967,135 @@ class CPU {
     // HALT
     op[0x76] = HALT;
     // LD (HL), A
-    op[0x77] = () { mem.W(r['hl'], r['a']); ticks = 8; }
+    op[0x77] = () { mem.W(r['hl'], r['a']); ticks = 8; };
     // LD A,B
-    op[0x7A] = () { r['a'] = r['b']; ticks = 4; };
+    op[0x78] = () { r['a'] = r['b']; ticks = 4; };
     // LD A,C
-    op[0x78] = () { r['a'] = r['c']; ticks = 4; };
+    op[0x79] = () { r['a'] = r['c']; ticks = 4; };
     // LD A,D
-    op[0x79] = () { r['a'] = r['d']; ticks = 4; };
+    op[0x7A] = () { r['a'] = r['d']; ticks = 4; };
     // LD A,E
-    op[0x7A] = () { r['a'] = r['e']; ticks = 4; };
+    op[0x7B] = () { r['a'] = r['e']; ticks = 4; };
     // LD A,H
-    op[0x7B] = () { r['a'] = r['hl'] >> 8; ticks = 4; };
+    op[0x7C] = () { r['a'] = r['hl'] >> 8; ticks = 4; };
     // LD A,L
-    op[0x7C] = () { r['a'] = r['hl'] & 0x00FF; ticks = 4; };
+    op[0x7D] = () { r['a'] = r['hl'] & 0x00FF; ticks = 4; };
     // LD A,(HL)
-    op[0x7D] = () { r['a'] = mem.R(r['hl']); ticks = 8; };
+    op[0x7E] = () { r['a'] = mem.R(r['hl']); ticks = 8; };
     // LD A, A
-    op[0x7E] = NOP;
+    op[0x7F] = NOP;
     // ADD A,B
-    op[0x7F] = () {
-
-    };
+    op[0x80] = () { ADD_A('b', 4); };
     // ADD A,C
-    op[0x80] = () {
-
-    };
+    op[0x81] = () { ADD_A('c', 4); };
     // ADD A,D
-    op[0x81] = () {
-
-    };
+    op[0x82] = () { ADD_A('d', 4); };
     // ADD A,E
-    op[0x82] = () {
-
-    };
+    op[0x83] = () { ADD_A('e', 4); };
     // ADD A,H
-    op[0x83] = () {
-
-    };
+    op[0x84] = () { r['t1'] = r['hl'] >> 8; ADD_A('t1', 4); };
     // ADD A,L
-    op[0x84] = () {
-
-    };
+    op[0x85] = () { r['t1'] = r['hl'] & 0x00FF; ADD_A('t1', 4); };
     // ADD A,(HL)
-    op[0x85] = () {
-
-    };
+    op[0x86] = () { r['t1'] = mem.R(r['hl']); ADD_A('t1', 4); };
     // ADD A,A
-    op[0x86] = () {
-
-    };
-    // ADC A,A
-    op[0x87] = () {
-
-    };
+    op[0x87] = () { ADD_A('a', 4); };
     // ADC A,B
-    op[0x88] = () {
-
-    };
+    op[0x88] = () { ADC_A('b', 4); };
     // ADC A,C
-    op[0x89] = () {
-
-    };
+    op[0x89] = () { ADC_A('c', 4); };
     // ADC A,D
-    op[0x8A] = () {
-
-    };
+    op[0x8A] = () { ADC_A('d', 4); };
     // ADC A,E
-    op[0x8B] = () {
-
-    };
+    op[0x8B] = () { ADC_A('e', 4); };
     // ADC A,H
-    op[0x8C] = () {
-
-    };
+    op[0x8C] = () { r['t1'] = r['hl'] >> 8; ADC_A('t1', 4); };
     // ADC A,L
-    op[0x8D] = () {
-
-    };
+    op[0x8D] = () { r['t1'] = r['hl'] & 0xFF; ADC_A('t1', 4); };
     // ADC A,(HL)
-    op[0x8E] = () {
-
-    };
+    op[0x8E] = () { r['t1'] = mem.R(r['hl']); ADC_A('t1', 8); };
     // ADC A,A
-    op[0x8F] = () {
-
-    };
+    op[0x8F] = () { ADC_A('a', 4); };
     // SUB B
-    op[0x90] = () {
-
-    };
+    op[0x90] = () { SUB_A('b', 4); };
     // SUB C
-    op[0x91] = () {
-
-    };
+    op[0x91] = () { SUB_A('c', 4); };
     // SUB D
-    op[0x92] = () {
-
-    };
+    op[0x92] = () { SUB_A('d', 4); };
     // SUB E
-    op[0x93] = () {
-
-    };
+    op[0x93] = () { SUB_A('e', 4); };
     // SUB H
-    op[0x94] = () {
-
-    };
+    op[0x94] = () { r['t1'] = r['hl'] >> 8; SUB_A('t1', 4); };
     // SUB L
-    op[0x95] = () {
-
-    };
+    op[0x95] = () { r['t1'] = r['hl'] & 0xFF; SUB_A('t1', 4); };
     // SUB (HL)
-    op[0x96] = () {
-
-    };
+    op[0x96] = () { r['t1'] = mem.R(r['h1']); SUB_A('t1', 8); };
     // SUB A
-    op[0x97] = () {
-
-    };
+    op[0x97] = () { SUB_A('a', 4); };
     // SBC A,B
-    op[0x98] = () {
-
-    };
+    op[0x98] = () { SBC_A('b', 4); };
     // SBC A,C
-    op[0x99] = () {
-
-    };
+    op[0x99] = () { SBC_A('c', 4); };
     // SBC A,D
-    op[0x9A] = () {
-
-    };
+    op[0x9A] = () { SBC_A('d', 4); };
     // SBC A,E
-    op[0x9B] = () {
-
-    };
+    op[0x9B] = () { SBC_A('e', 4); };
     // SBC A,H
-    op[0x9C] = () {
-
-    };
+    op[0x9C] = () { r['t1'] = r['hl'] >> 8; SBC_A('t1', 4); };
     // SBC A,L
-    op[0x9D] = () {
-
-    };
+    op[0x9D] = () { r['t1'] = r['hl'] & 0xFF; SBC_A('t1', 4); };
     // SBC A,(HL)
-    op[0x9E] = () {
-
-    };
+    op[0x9E] = () { r['t1'] = mem.R(r['hl']); SBC_A('t1', 4); };
     // SBC A,A
-    op[0x9F] = () {
-
-    };
+    op[0x9F] = () { SBC_A('a', 4); };
     // AND B
-    op[0xA0] = () {
-
-    };
-    // AND C
-    op[0xA1] = () {
-
-    };
-    // AND D
-    op[0xA2] = () {
-
-    };
-    // AND E
-    op[0xA3] = () {
-
-    };
-    // AND H
-    op[0xA4] = () {
-
-    };
-    // AND L
-    op[0xA5] = () {
-
-    };
-    // AND (HL)
-    op[0xA6] = () {
-
-    };
-    // AND A
-    op[0xA7] = () {
-
-    };
+    op[0xA0] = () { AND_A('b', 4); };
+    // AND A,C
+    op[0xA1] = () { AND_A('c', 4); };
+    // AND A,D
+    op[0xA2] = () { AND_A('d', 4); };
+    // AND A,E
+    op[0xA3] = () { AND_A('e', 4); };
+    // AND A,H
+    op[0xA4] = () { r['t1'] = r['hl'] >> 8; AND_A('t1', 4); };
+    // AND A,L
+    op[0xA5] = () { r['t1'] = r['hl'] & 0xFF; AND_A('t1', 4); };
+    // AND A,(HL)
+    op[0xA6] = () { r['t1'] = mem.R(r['hl']); AND_A('t1', 4); };
+    // AND A,A
+    op[0xA7] = () { AND_A('a', 4); };
     // XOR B
-    op[0xA8] = () {
-
-    };
-    // XOR C
-    op[0xA9] = () {
-
-    };
-    // XOR D
-    op[0xAA] = () {
-
-    };
-    // XOR E
-    op[0xAB] = () {
-
-    };
-    // XOR H
-    op[0xAC] = () {
-
-    };
-    // XOR L
-    op[0xAD] = () {
-
-    };
-    // XOR (HL)
-    op[0xAE] = () {
-
-    };
-    // XOR A
-    op[0xAF] = () {
-
-    };
+    op[0xA8] = () { XOR_A('b', 4); };
+    // XOR A,C
+    op[0xA9] = () { XOR_A('c', 4); };
+    // XOR A,D
+    op[0xAA] = () { XOR_A('d', 4); };
+    // XOR A,E
+    op[0xAB] = () { XOR_A('e', 4); };
+    // XOR A,H
+    op[0xAC] = () { r['t1'] = r['hl'] >> 8; XOR_A('t1', 4); };
+    // XOR A,L
+    op[0xAD] = () { r['t1'] = r['hl'] & 0xFF; XOR_A('t1', 4); };
+    // XOR A,(HL)
+    op[0xAE] = () { r['t1'] = mem.R(r['hl']); XOR_A('t1', 4); };
+    // XOR A,A
+    op[0xAF] = () { XOR_A('a', 4); };
     // OR B
-    op[0xB0] = () {
-
-    };
-    // OR C
-    op[0xB1] = () {
-
-    };
-    // OR D
-    op[0xB2] = () {
-
-    };
-    // OR E
-    op[0xB3] = () {
-
-    };
-    // OR H
-    op[0xB4] = () {
-
-    };
-    // OR L
-    op[0xB5] = () {
-
-    };
-    // OR (HL)
-    op[0xB6] = () {
-
-    };
-    // OR A
-    op[0xB7] = () {
-
-    };
+    op[0xB0] = () { OR_A('b', 4); };
+    // OR A,C
+    op[0xB1] = () { OR_A('c', 4); };
+    // OR A,D
+    op[0xB2] = () { OR_A('d', 4); };
+    // OR A,E
+    op[0xB3] = () { OR_A('e', 4); };
+    // OR A,H
+    op[0xB4] = () { r['t1'] = r['hl'] >> 8; OR_A('t1', 4); };
+    // OR A,L
+    op[0xB5] = () { r['t1'] = r['hl'] & 0xFF; OR_A('t1', 4); };
+    // OR A,(HL)
+    op[0xB6] = () { r['t1'] = mem.R(r['hl']); OR_A('t1', 4); };
+    // OR A,A
+    op[0xB7] = () { OR_A('a', 4); };
     // CP B
     op[0xB8] = () {
 
