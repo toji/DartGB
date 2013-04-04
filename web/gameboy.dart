@@ -14,7 +14,7 @@ class Gameboy {
   Memory memory = null;
   Interrupts interrupts = null;
   CPU cpu = null;
-  Input input = new Input();
+  Input input = null;
   Timers timers;
 
   Timer runTimer = null;
@@ -30,6 +30,7 @@ class Gameboy {
     cpu = new CPU(this);
     interrupts = new Interrupts(this);
     lcd = new LCD(canvas, memory);
+    input = new Input(memory);
     run();
   }
 
