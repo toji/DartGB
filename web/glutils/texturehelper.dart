@@ -17,4 +17,9 @@ class TextureHelper {
     gl.texImage2D(GL.TEXTURE_2D, 0, GL.RGBA, width, height, 0, GL.RGBA, GL.UNSIGNED_BYTE, null);
     gl.bindTexture(GL.TEXTURE_2D, null);
   }
+  
+  void setTextureData() {
+    gl.bindTexture(GL.TEXTURE_2D, texture);
+    gl.texImage2D(GL.TEXTURE_2D, 0, GL.RGBA, width, height, 0, GL.RGBA, GL.UNSIGNED_BYTE, null);
+  }
 }
