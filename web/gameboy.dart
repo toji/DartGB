@@ -46,6 +46,8 @@ class Gameboy {
     // TODO: disable/enable buttons here
     fpsTimer = new Timer.periodic(new Duration(seconds: 1), showFPS);
     runTimer = new Timer.periodic(new Duration(milliseconds: 16), frame);
+    var status = document.getElementById('status') as DivElement;
+    status.innerHtml = 'Running';
   }
 
   void pause() {
@@ -73,8 +75,8 @@ class Gameboy {
   void showFPS(Timer t) {
     frames += timers.FPS;
     ++seconds;
-    var status = document.getElementById('status') as DivElement;
-    status.innerHtml = 'Running ${timers.FPS} fps';
+    //var status = document.getElementById('status') as DivElement;
+    //status.innerHtml = 'Running ${timers.FPS} fps';
     timers.FPS = 0;
     bankSwitchCount = 0;
   }
