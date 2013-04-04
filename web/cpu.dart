@@ -1293,7 +1293,10 @@ class CPU {
         ticks = 16;
     };
     // OR u8
-    op[0xF6] = () { OR_A(gb.memory.R(r['pc']++), 8); };
+    op[0xF6] = () {
+      r['t2'] = gb.memory.R(r['pc']++);
+      OR_A('t2', 8);
+    };
     // RST 0x30
     op[0xF7] = () { RST(0x30); };
     // LD HL,SP+u8
