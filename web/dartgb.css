@@ -14,6 +14,14 @@ html, body {
   border-radius: 16px 16px 110px 16px;
 }
 
+.status {
+  position: relative;
+  left: 20px;
+  top: 10px;
+  font-size: 14px;
+  color: rgb(200,200,200);
+}
+
 /* Smaller than standard 960 (devices and browsers) */
 @media only screen and (max-width: 610px) {
   .case {
