@@ -7,6 +7,8 @@ class LCD {
   Memory memory;
   
   RenderTarget _frontBuffer;
+  TextureHelper _tiles;
+  
   GL.Buffer _quadBuffer;
   
   ShaderHelper _blitShader;
@@ -21,15 +23,17 @@ class LCD {
     varying vec2 vTexCoord0;
     
     uniform mat3 clipMat;
+    uniform mat3 imgMat;
     uniform vec2 srcOffset;
     uniform vec2 srcScale;
     uniform vec2 dstOffset;
     uniform vec2 dstScale; 
 
     void main() {
-        vTexCoord0 = (TexCoord0 * srcScale) + srcOffset;
-        vec2 blitPosition = (Position * dstScale) + dstOffset;
-        gl_Position = vec4(clipMat * vec3(blitPosition, 1.0), 1.0);
+        vec2 srcBlitPos = (TexCoord0 * srcScale) + srcOffset;
+        vTexCoord0 = (imgMat * vec3(srcBlitPos, 1.0)).xy;
+        vec2 dstBlitPos = (Position * dstScale) + dstOffset;
+        gl_Position = vec4(clipMat * vec3(dstBlitPos, 1.0), 1.0);
     }
   """;
   
@@ -45,6 +49,7 @@ class LCD {
   """;
   
   Float32Array _clipMat = new Float32Array(9);
+  Float32Array _imgMat = new Float32Array(9);
 
   LCD(CanvasElement this._canvas, Memory this.memory) {
     // Initializes a few useful data structures.
@@ -63,6 +68,7 @@ class LCD {
     
     // Allocate the front buffer
     _frontBuffer = new RenderTarget(gl, 256, 256, true);
+    _tiles = new TextureHelper(gl, 24, 1024);
     
     _blitShader = new ShaderHelper(gl, _blitVS, _blitFS);
     
@@ -80,22 +86,60 @@ class LCD {
     ]);
     
     gl.bufferData(GL.ARRAY_BUFFER, verts, GL.STATIC_DRAW);
+    
+    for(int i = 0; i < 384; ++i) {
+      updateTile(i);
+    }
+    
+    blitTile(0, 0, 0);
+    blitTile(16, 8, 8);
+    blitTile(32, 16, 16);
+    blitTile(64, 32, 32);
+    blitTile(128, 130, 130);
+    
+    blit(_tiles, _frontBuffer, 0, 0, 0, 128, 24, 256);
+    
+    blit(_tiles, null, 0, 0, 256, 0, 24, 1024); 
+    blit(_tiles, null, 8, 8, 280, 8, 8, 8);
+    
+    present(64, 64);
+  }
   
-    present(0, 0);
+  Uint8Array _tileBuffer = new Uint8Array(256);
+  
+  void updateTile(int tileOffset) {
+    for(int i = 0; i < 256; i+=4) {
+      _tileBuffer[i] = (tileOffset % 256);
+      _tileBuffer[i+1] = (tileOffset % 256);
+      _tileBuffer[i+2] = (tileOffset % 256);
+      _tileBuffer[i+3] = 255;
+    }
+    
+    int tileX = 8 * (tileOffset / 128).toInt();
+    int tileY = 8 * (tileOffset % 128);
+    
+    gl.bindTexture(GL.TEXTURE_2D, _tiles.texture);
+    gl.texSubImage2D(GL.TEXTURE_2D, 0, tileX, tileY, 8, 8, GL.RGBA, GL.UNSIGNED_BYTE, _tileBuffer);
+  }
+  
+  void blitTile(int tileOffset, int x, int y) {
+    int tileX = 8 * (tileOffset / 128).toInt();
+    int tileY = 8 * (tileOffset % 128);
+    blit(_tiles, _frontBuffer, tileX, tileY, x, y, 8, 8);  
   }
   
   void blit(TextureHelper source, RenderTarget dest, int srcX, int srcY, int dstX, int dstY, int width, int height) {
     int dstWidth = dest != null ? dest.width : gl.drawingBufferWidth;
     int dstHeight = dest != null ? dest.height : gl.drawingBufferHeight;
     
-    int srcWidth = source.width;
-    int srcHeight = source.height;
-    
     if(dest != null) {
+      gl.bindTexture(GL.TEXTURE_2D, null);
       gl.bindFramebuffer(GL.FRAMEBUFFER, dest.framebuffer);
     } else {
       gl.bindFramebuffer(GL.FRAMEBUFFER, null);
     }
+    
+    gl.viewport(0, 0, dstWidth, dstHeight);
     
     gl.useProgram(_blitShader.program);
     
@@ -115,7 +159,14 @@ class LCD {
     _clipMat[7] = 1.0;
     _clipMat[8] = 1.0;
     
+    _imgMat[0] = 1.0 / source.width;
+    _imgMat[4] = -1.0 / source.height;
+    _imgMat[6] = 0.0;
+    _imgMat[7] = 0.0;
+    _imgMat[8] = 1.0;
+    
     gl.uniformMatrix3fv(_blitShader.uniforms["clipMat"], false, _clipMat);
+    gl.uniformMatrix3fv(_blitShader.uniforms["imgMat"], false, _imgMat);
     gl.uniform2f(_blitShader.uniforms["dstOffset"], dstX, dstY);
     gl.uniform2f(_blitShader.uniforms["dstScale"], width, height);
     gl.uniform2f(_blitShader.uniforms["srcOffset"], srcX, srcY);
@@ -184,6 +235,6 @@ class LCD {
   }
   
   void present(int ScrollX, int ScrollY) {
-    blit(_frontBuffer.texture, null, ScrollX, ScrollY, 0, 0, 160, 144);
+    blit(_frontBuffer.texture, null, ScrollX, ScrollY, 0, 0, 256, 256);
   }
 }
