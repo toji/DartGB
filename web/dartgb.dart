@@ -28,4 +28,5 @@ int startingCount = 5;
 void main() {
   CanvasElement canvas = query('#lcd');
   var gameboy = new Gameboy('TEST.GB', canvas);
+  // var gameboy = new Gameboy('tetris.gb', canvas);
 }
