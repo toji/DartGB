@@ -64,6 +64,7 @@ class Gameboy {
       cpu.next();
       interrupts.run();
       timers.control();
+      input.pollGamepad();
       // debugger.checkBreakpoint();
     }
   }

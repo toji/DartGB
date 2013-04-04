@@ -1,13 +1,66 @@
 part of dartgb;
 
+class GamepadButton {
+  int ID;
+  bool pressed;
+  
+  GamepadButton(this.ID) : pressed = false;
+}
+
 class Input {
   Gameboy gb = null;
+  Gamepad gamepad = null;
+  
   int pin14 = 0xEF;
   int pin15 = 0xDF;
+  
+  const int BUTTON_A = 1;
+  const int BUTTON_B = 0;
+  const int BUTTON_START = 9;
+  const int BUTTON_SELECT = 8;
+  const int BUTTON_UP = 12;
+  const int BUTTON_DOWN = 13;
+  const int BUTTON_LEFT = 14;
+  const int BUTTON_RIGHT = 15;
+  
+  List<GamepadButton> buttons = new List<GamepadButton>(8);
+  
+  const num ANALOGUE_THRESHOLD = 0.5;
   
   Input(this.gb) {
     window.document.onKeyDown.listen(onKeyDownEvent);
     window.document.onKeyUp.listen(onKeyUpEvent);
+
+    buttons[0] = new GamepadButton(BUTTON_A);
+    buttons[1] = new GamepadButton(BUTTON_B);
+    buttons[2] = new GamepadButton(BUTTON_START);
+    buttons[3] = new GamepadButton(BUTTON_SELECT);
+    buttons[4] = new GamepadButton(BUTTON_UP);
+    buttons[5] = new GamepadButton(BUTTON_DOWN);
+    buttons[6] = new GamepadButton(BUTTON_LEFT);
+    buttons[7] = new GamepadButton(BUTTON_RIGHT);    
+  }
+  
+  bool buttonPressed(int buttonID) => gamepad.buttons[buttonID] > ANALOGUE_THRESHOLD;
+  
+  void pollGamepad() {
+    var new_gamepad = window.navigator.getGamepads()[0];
+    if (new_gamepad != null && new_gamepad != gamepad) {
+      gamepad = new_gamepad;
+      print('found gamepad ${gamepad.id}');
+    }
+    if (gamepad != null && gamepad.buttons != null) {
+      buttons.forEach((b) {
+          bool pressed = gamepad.buttons[b.ID];
+          if (pressed != b.pressed) {
+            if (pressed)
+              onButtonDown(b.ID);
+            else
+              onButtonUp(b.ID);
+            b.pressed = pressed;
+          }
+      });
+    }
   }
   
   void read(int v) {
@@ -27,46 +80,112 @@ class Input {
     };
   }
   
+  void onButtonDown(int button) {
+    switch (button) {
+      case BUTTON_DOWN:
+        pin14 &= 0xF7;
+        gb.memory.W(gb.memory.IF, gb.memory.IF|16);
+        break;
+      case BUTTON_UP:
+        pin14 &= 0xFB;
+        gb.memory.W(gb.memory.IF, gb.memory.IF|16);
+        break;
+      case BUTTON_LEFT:
+        pin14 &= 0xFD;
+        gb.memory.W(gb.memory.IF, gb.memory.IF|16);
+        break;
+      case BUTTON_RIGHT:
+        pin14 &= 0xFE;
+        gb.memory.W(gb.memory.IF, gb.memory.IF|16);
+        break;
+      case BUTTON_START:
+        pin15 &= 0xF7;
+        gb.memory.W(gb.memory.IF, gb.memory.IF|16);
+        break;
+      case BUTTON_SELECT:
+        pin15 &= 0xFB;
+        gb.memory.W(gb.memory.IF, gb.memory.IF|16);
+        break;
+      case BUTTON_B:
+        pin15 &= 0xFD;
+        gb.memory.W(gb.memory.IF, gb.memory.IF|16);
+        break;
+      case BUTTON_A:
+        pin15 &= 0xFE;
+        gb.memory.W(gb.memory.IF, gb.memory.IF|16);
+        break;
+    }
+  }
+  
+  void onButtonUp(int button) {
+    switch (button) {
+      case BUTTON_DOWN:
+        pin14 |= 0x8;
+        gb.memory.W(gb.memory.IF, gb.memory.IF|16);
+        break;
+      case BUTTON_UP:
+        pin14 |= 0x4;
+        gb.memory.W(gb.memory.IF, gb.memory.IF|16);
+        break;
+      case BUTTON_LEFT:
+        pin14 |= 0x2;
+        gb.memory.W(gb.memory.IF, gb.memory.IF|16);
+        break;
+      case BUTTON_RIGHT:
+        pin14 |= 0x1;
+        gb.memory.W(gb.memory.IF, gb.memory.IF|16);
+        break;
+      case BUTTON_START:
+        pin15 |= 0x8;
+        gb.memory.W(gb.memory.IF, gb.memory.IF|16);
+        break;
+      case BUTTON_SELECT:
+        pin15 |= 0x4;
+        gb.memory.W(gb.memory.IF, gb.memory.IF|16);
+        break;
+      case BUTTON_B:
+        pin15 |= 0x2;
+        gb.memory.W(gb.memory.IF, gb.memory.IF|16);
+        break;
+      case BUTTON_A:
+        pin15 |= 0x1;
+        gb.memory.W(gb.memory.IF, gb.memory.IF|16);
+        break;
+    }
+  }
+      
   void onKeyDownEvent(KeyboardEvent e) {
     switch (e.keyCode) {
       case 40:  // down
-        pin14 &= 0xF7;
-        gb.memory.W(gb.memory.IF, gb.memory.IF|16);
+        onButtonDown(BUTTON_DOWN);
         e.defaultPrevented = true;
         break;
       case 38:  // up
-        pin14 &= 0xFB;
-        gb.memory.W(gb.memory.IF, gb.memory.IF|16);
+        onButtonDown(BUTTON_UP);
         e.defaultPrevented = true;
         break;
       case 37:  // left
-        pin14 &= 0xFD;
-        gb.memory.W(gb.memory.IF, gb.memory.IF|16);
+        onButtonDown(BUTTON_LEFT);
         e.defaultPrevented = true;
         break;
       case 39:  // right
-        pin14 &= 0xFE;
-        gb.memory.W(gb.memory.IF, gb.memory.IF|16);
+        onButtonDown(BUTTON_RIGHT);
         e.defaultPrevented = true;
         break;
       case 65:  // start
-        pin15 &= 0xF7;
-        gb.memory.W(gb.memory.IF, gb.memory.IF|16);
+        onButtonDown(BUTTON_START);
         e.defaultPrevented = true;
         break;
       case 83:  // select
-        pin15 &= 0xFB;
-        gb.memory.W(gb.memory.IF, gb.memory.IF|16);
+        onButtonDown(BUTTON_SELECT);
         e.defaultPrevented = true;
         break;
       case 90:  // B
-        pin15 &= 0xFD;
-        gb.memory.W(gb.memory.IF, gb.memory.IF|16);
+        onButtonDown(BUTTON_B);
         e.defaultPrevented = true;
         break;
       case 88:  // 
-        pin15 &= 0xFE;
-        gb.memory.W(gb.memory.IF, gb.memory.IF|16);
+        onButtonDown(BUTTON_A);
         e.defaultPrevented = true;
         break;
     }
@@ -75,43 +194,35 @@ class Input {
   void onKeyUpEvent(KeyboardEvent e) {
     switch (e.keyCode) {
       case 40:  // down
-        pin14 |= 0x8;
-        gb.memory.W(gb.memory.IF, gb.memory.IF|16);
+        onButtonUp(BUTTON_DOWN);
         e.defaultPrevented = true;
         break;
       case 38:  // up
-        pin14 |= 0x4;
-        gb.memory.W(gb.memory.IF, gb.memory.IF|16);
+        onButtonUp(BUTTON_UP);
         e.defaultPrevented = true;
         break;
       case 37:  // left
-        pin14 |= 0x2;
-        gb.memory.W(gb.memory.IF, gb.memory.IF|16);
+        onButtonUp(BUTTON_LEFT);
         e.defaultPrevented = true;
         break;
       case 39:  // right
-        pin14 |= 0x1;
-        gb.memory.W(gb.memory.IF, gb.memory.IF|16);
+        onButtonUp(BUTTON_RIGHT);
         e.defaultPrevented = true;
         break;
       case 65:  // start
-        pin15 |= 0x8;
-        gb.memory.W(gb.memory.IF, gb.memory.IF|16);
+        onButtonUp(BUTTON_START);
         e.defaultPrevented = true;
         break;
       case 83:  // select
-        pin15 |= 0x4;
-        gb.memory.W(gb.memory.IF, gb.memory.IF|16);
+        onButtonUp(BUTTON_SELECT);
         e.defaultPrevented = true;
         break;
       case 90:  // B
-        pin15 |= 0x2;
-        gb.memory.W(gb.memory.IF, gb.memory.IF|16);
+        onButtonUp(BUTTON_B);
         e.defaultPrevented = true;
         break;
       case 88:  // A
-        pin15 |= 0x1;
-        gb.memory.W(gb.memory.IF, gb.memory.IF|16);
+        onButtonUp(BUTTON_A);
         e.defaultPrevented = true;
         break;
     }
