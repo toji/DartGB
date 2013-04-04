@@ -5,7 +5,7 @@ typedef void InterruptFunc();
 class Interrupts {
   List<InterruptFunc> interrupts = new List<InterruptFunc>(32);
   Gameboy gb = null;
-  bool enabled = false;
+  bool enabled = true;  
   bool halt = false;
 
   Interrupts(this.gb) {
@@ -64,7 +64,7 @@ class Interrupts {
   
   void buttons() {
     enabled = halt = false;
-    gb.memory.W(gb.memory.IF, gb.memory.IF&0xF7);
+    gb.memory.W(gb.memory.IF, gb.memory.IF&0xEF);
     pushPC();
     gb.cpu.r['pc'] = 0x0060;
     gb.cpu.ticks += 32;
