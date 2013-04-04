@@ -285,13 +285,4 @@ class Memory {
       }
     }
   }
-  
-  void setTimerFreq(int v) {
-    switch(v) {
-      case 0:
-      case 1:
-      case 2:
-      case 3:
-    }
-  }
 }
