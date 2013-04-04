@@ -24,15 +24,16 @@ class Gameboy {
       : seconds = 0,
         frames = 0,
         paused = true {
-    rom = new ROM('../roms/$filename');
-    // TODO: wait for ROM to complete load before initializing memory.
-    memory = new Memory(rom);
-    timers = new Timers(memory);
-    cpu = new CPU(this);
-    interrupts = new Interrupts(this);
-    lcd = new LCD(canvas, memory);
-    input = new Input(memory);
-    run();
+    ROM.load('../roms/$filename').then((ROM r) {
+        rom = r;
+        memory = new Memory(rom);
+        timers = new Timers(memory);
+        cpu = new CPU(this);
+        interrupts = new Interrupts(this);
+        lcd = new LCD(canvas, memory);
+        input = new Input(memory);
+        run();
+    });
   }
 
   void run() {
