@@ -70,16 +70,19 @@ class LCD {
     present();
   }
   
-  // 0xFF40 LCD and GPU control Read/write
-  // 0xFF42  Scroll-Y  Read/write
-  // 0xFF43  Scroll-X  Read/write
-  // 0xFF44  Current scan line Read only
+  // 0xFF40  LCD and GPU control Read/write
   // 0xFF47  Background palette  Write only
+  
+  int get ScrollX => memory.R(0xFF42);
+  int get ScrollY => memory.R(0xFF43);
+  int get ScanLine => memory.R(0xFF44);
 
   Uint8Array _scanline = new Uint8Array(512);
   void renderScan() {
-    int y = 0;
+    int y = ScanLine;
     int scanlineOffset = 0;
+    
+    //print("Rendering Scanline $ScanLine");
     
     int backgroundMapOffset = 0x9800; // for looping through the tile maps
     
@@ -116,7 +119,9 @@ class LCD {
   }
   
   void clearScan() {
-    int y = 0;
+    int y = ScanLine;
+    
+    //print("Clearing Scanline $ScanLine");
     
     _scanline.forEach((index) => _scanline[index] = 0);
     gl.bindTexture(GL.TEXTURE_2D, _frontBuffer.texture);
@@ -124,9 +129,9 @@ class LCD {
   }
   
   void present() {
-    int ScrollX = 0;
-    int SCrollY = 0;
     gl.viewport(0, 0, 256, 256);
+    
+    //print("Presenting w/ Scroll ($ScrollX, $ScrollY)");
     
     gl.useProgram(_blitShader.program);
     
@@ -144,6 +149,7 @@ class LCD {
   }
 
   void clear() {
+    //print("Clearing");
     gl.clear(GL.COLOR_BUFFER_BIT);
   }
 }
