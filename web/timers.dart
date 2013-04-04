@@ -1,41 +1,38 @@
 part of dartgb;
 
 class Timers {
+  Gameboy gb = null;
   int DIVTicks = 0;
-  int CPUTicks = 0;
   int LCDTicks = 0;
   int timerTicks = 0;
   int FPS = 0;
   bool endFrame = false;
-
-  Memory memory;
-  LCD lcd;
   
-  Timers(this.memory, this.lcd);
+  Timers(this.gb);
   
   void control() {
     // DIV control.
-    if ((DIVTicks += CPUTicks) >= 256) {
+    if ((DIVTicks += gb.cpu.ticks) >= 256) {
       DIVTicks -= 256;
-      memory.DIV = (memory.DIV + 1) & 0xFF; // inc DIV
+      gb.memory.DIV = (gb.memory.DIV + 1) & 0xFF; // inc DIV
     }
     
     // LCD timing.
-    LCDTicks += CPUTicks;
+    LCDTicks += gb.cpu.ticks;
     if (LCDTicks >= 456) { // 1 scan line with h-blank is 456 ticks.
       LCDTicks -= 456;
       compareLYandLYC();
-      if ((++memory.LY) >= 154) {
-        memory.LY -= 154; // inc LY (current scanline)
+      if ((++gb.memory.LY) >= 154) {
+        gb.memory.LY -= 154; // inc LY (current scanline)
       }
-      if (memory.LY == 144) {
+      if (gb.memory.LY == 144) {
         mode1(); // 4560 ticks.
-      } else if (memory.LY == 0) {
+      } else if (gb.memory.LY == 0) {
         endFrame = true;
         FPS++;
       }
     }
-    if (memory.LY < 144) { // If not in v-blank.
+    if (gb.memory.LY < 144) { // If not in v-blank.
       if (LCDTicks <= 204) {
         mode0(); // 204 cycles.
       } else if (LCDTicks <= 284) {
@@ -46,12 +43,12 @@ class Timers {
     }
     
     // Internal timer.
-    if (memory.TAC_timerOn) {
-      if ((timerTicks += CPUTicks) >= memory.timerPeriod) {
-        timerTicks -= memory.timerPeriod;
-        if ((++memory.TIMA) >= 256) {
-          memory.TIMA = memory.TMA;
-          memory.IF |= 4;
+    if (gb.memory.TAC_timerOn) {
+      if ((timerTicks += gb.cpu.ticks) >= gb.memory.timerPeriod) {
+        timerTicks -= gb.memory.timerPeriod;
+        if ((++gb.memory.TIMA) >= 256) {
+          gb.memory.TIMA = gb.memory.TMA;
+          gb.memory.IF |= 4;
         }
       }
     }
@@ -59,57 +56,57 @@ class Timers {
   
   // h-blank.
   void mode0() {
-    if (memory.STAT_mode != 0) {
-      memory.STAT_mode = 0;
-      if (memory.STAT_mode0) { // Toggles whether to use this interrupt.
-        memory.IF |= 2;
+    if (gb.memory.STAT_mode != 0) {
+      gb.memory.STAT_mode = 0;
+      if (gb.memory.STAT_mode0) { // Toggles whether to use this interrupt.
+        gb.memory.IF |= 2;
       }
     }
   }
   
   // v-blank.
   void mode1() {
-    memory.STAT_mode = 1;
-    if (memory.STAT_mode1) { // Toggles whether to use this interrupt.
-      memory.IF |= 2;
+    gb.memory.STAT_mode = 1;
+    if (gb.memory.STAT_mode1) { // Toggles whether to use this interrupt.
+      gb.memory.IF |= 2;
     }
-    if (memory.LCDC_displayOn) {
-      lcd.present();
+    if (gb.memory.LCDC_displayOn) {
+      gb.lcd.present();
     } else {
-      lcd.clear();
+      gb.lcd.clear();
     }
   }
   
   // OAM in use.
   void mode2() {
-    if (memory.STAT_mode != 2) {
-      memory.STAT_mode = 2;
-      if (memory.STAT_mode2) {
-        memory.IF |= 2;
+    if (gb.memory.STAT_mode != 2) {
+      gb.memory.STAT_mode = 2;
+      if (gb.memory.STAT_mode2) {
+        gb.memory.IF |= 2;
       }
     }
   }
   
   // OAM + VRAM busy.
   void mode3() {
-    if (memory.STAT_mode != 3) {
-      memory.STAT_mode = 3;
-      if (memory.LCDC_displayOn) {
-        lcd.renderScan();
+    if (gb.memory.STAT_mode != 3) {
+      gb.memory.STAT_mode = 3;
+      if (gb.memory.LCDC_displayOn) {
+        gb.lcd.renderScan();
       } else {
-        lcd.clearScan();
+        gb.lcd.clearScan();
       }
     }
   }
     
   void compareLYandLYC() {
-    if (memory.LY == memory.LYC) {
-      memory.STAT |= 0x04; // Set LY-LYC coincidence flag to 1.
-      if (memory.STAT_LYLC) { // Toggles whether to use this interrupt.
-        memory.IF |= 2; // Set second IF bit.
+    if (gb.memory.LY == gb.memory.LYC) {
+      gb.memory.STAT |= 0x04; // Set LY-LYC coincidence flag to 1.
+      if (gb.memory.STAT_LYLC) { // Toggles whether to use this interrupt.
+        gb.memory.IF |= 2; // Set second IF bit.
       }
     } else {
-      memory.STAT &= 0xFB; // Set LY-LYC coincidence flag to 0.
+      gb.memory.STAT &= 0xFB; // Set LY-LYC coincidence flag to 0.
     }
   }
 }

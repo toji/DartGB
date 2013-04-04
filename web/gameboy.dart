@@ -32,8 +32,8 @@ class Gameboy {
         memory = new Memory(this);
         memory.reset();
         lcd = new LCD(canvas, memory);
-        timers = new Timers(memory, lcd);
         cpu = new CPU(this);
+        timers = new Timers(this);
         interrupts = new Interrupts(this);
         run();
     });
