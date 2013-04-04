@@ -1,7 +1,9 @@
 part of dartgb;
 
 class Memory {
-  Uint8List _mem = new Uint8List(0x10000);
+  Gameboy gb = null;
+  
+  final Uint8List _mem = new Uint8List(0x10000);
   int get P1 =>   _mem[0xFF00];
   int get SC =>   _mem[0xFF02];
   int get DIV =>  _mem[0xFF04];
@@ -42,22 +44,26 @@ class Memory {
   // These get updated by Timers.
   int set DIV(int v)  => _mem[0xFF04] = v;
   int set IF(int v)   => _mem[0xFF0F] = v;
+  int set P1(int v)   => _mem[0xFF00] = v;
   int set STAT(int v) => _mem[0xFF41] = v;
-  int set LY(int v) =>   _mem[0xFF44] = v;
+  int set LY(int v)   => _mem[0xFF44] = v;
   int set STAT_mode(int v) => _mem[0xFF41] = (STAT & 0xFC) | v;
     
-  List<int> BackPal = new List<int>(4);
-  List<List<int>> SpritePal = [new List<int>(4), new List<int>(4)];
+  final List<int> BackPal = new List<int>(4);
+  final List<List<int>> SpritePal = [new List<int>(4), new List<int>(4)];
   
   bool tilesUpdated = false;
   bool backgroundUpdated = false;
   // 384 accessible tiles.
-  List<bool> updatedTiles = new List<bool>(384);
+  final List<bool> updatedTiles = new List<bool>(384);
   // Two 32x32 maps = 2048 tile indexes. 
-  List<bool> updatedBackground = new List<bool>(2048);
+  final List<bool> updatedBackground = new List<bool>(2048);
   
-  Memory(ROM rom) {
-    _mem.setRange(0, rom.data.length, rom.data);
+  Memory(this.gb) {
+    _mem.setRange(0, gb.rom.data.length, gb.rom.data);
+  }
+  
+  void reset() {
     W(0xFF00, 0xFF); // P1
     W(0xFF04, 0xAF); // DIV
     W(0xFF05, 0x00); // TIMA
@@ -106,7 +112,7 @@ class Memory {
     if (addr >= 0xFF00) {
       switch (addr & 0xFF) {
         case 0x00:
-          // TODO: handle joypad IO.
+          gb.input.read(val);
           return;
         case 0x02:
           // Serial cable not implemented.

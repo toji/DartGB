@@ -25,14 +25,16 @@ class Gameboy {
         frames = 0,
         paused = true {
     ROM.load('../roms/$filename').then((ROM r) {
+        // NOTE: DO NOT CHANGE THE ORDER OF INITIALIZATION
         rom = r;
         print('Loaded ${rom.name}');
-        memory = new Memory(rom);
+        input = new Input(this);
+        memory = new Memory(this);
+        memory.reset();
         timers = new Timers(memory);
         cpu = new CPU(this);
         interrupts = new Interrupts(this);
         lcd = new LCD(canvas, memory);
-        input = new Input(memory);
         run();
     });
   }
