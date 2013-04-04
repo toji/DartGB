@@ -49,20 +49,20 @@ class LCD {
     gl.clearColor(0.0, 0.0, 0.0, 0.0);
     
     // Allocate the front buffer
-    _frontBuffer = new TextureHelper(gl, 256, 256, false);
+    _frontBuffer = new TextureHelper(gl, 160, 144, false);
     _blitShader = new ShaderHelper(gl, _blitVS, _blitFS);
     
     _quadBuffer = gl.createBuffer();
     gl.bindBuffer(GL.ARRAY_BUFFER, _quadBuffer);
     
     Float32Array verts = new Float32Array.fromList([
-       -1.0,  -1.0,  1.0, 1.0,
-       1.0,  -1.0,  0.0, 1.0,
-       1.0,  1.0,  0.0, 0.0,
+       -1.0,  -1.0,  0.0, 1.0,
+       1.0,  -1.0,  1.0, 1.0,
+       1.0,  1.0,  1.0, 0.0,
       
-       -1.0,  -1.0,  1.0, 1.0,
-       1.0,  1.0,  0.0, 0.0,
-       -1.0,  1.0,  1.0, 0.0
+       -1.0,  -1.0,  0.0, 1.0,
+       1.0,  1.0,  1.0, 0.0,
+       -1.0,  1.0,  0.0, 0.0
     ]);
     
     gl.bufferData(GL.ARRAY_BUFFER, verts, GL.STATIC_DRAW);
@@ -81,7 +81,7 @@ class LCD {
   bool get SpritesEnabled => (memory.LCDC & 0x02) == 1;
   int get SpriteHeight => (memory.LCDC & 0x04) == 0 ? 8 : 16;
   int get BackgroundOffset => (memory.LCDC & 0x08) == 0 ? 0x9800 : 0x9C00;
-  int get BackgroundTileSet => (memory.LCDC & 0x10) == 0 ? 0 : 1;
+  int get BackgroundTileSet => (memory.LCDC & 0x10) == 0 ? 1 : 0;
   bool get WindowEnabled => (memory.LCDC & 0x20) == 1;
   int get WindowTiles => (memory.LCDC & 0x40) == 0 ? 0 : 1;
   bool get DisplayEnabled => (memory.LCDC & 0x80) == 1;
@@ -136,12 +136,12 @@ class LCD {
         int tileValue = ((rowLow >> i) & 0x01) + ((rowHigh >> i) & 0x02);
         tileValue = Pallet(tileValue);
         
-        SetScanline((x * 8) + i, tileValue);
+        SetScanline((x * 8) + (8 - i), tileValue);
       }
     }
     
     gl.bindTexture(GL.TEXTURE_2D, _frontBuffer.texture);
-    gl.texSubImage2D(GL.TEXTURE_2D, 0, 0, y, 256, 1, GL.LUMINANCE_ALPHA, GL.UNSIGNED_BYTE, _scanline);
+    gl.texSubImage2D(GL.TEXTURE_2D, 0, 0, y, 160, 1, GL.LUMINANCE_ALPHA, GL.UNSIGNED_BYTE, _scanline);
   }
   
   void clearScan() {
@@ -151,7 +151,7 @@ class LCD {
     
     _scanline.forEach((el) => el = 0);
     gl.bindTexture(GL.TEXTURE_2D, _frontBuffer.texture);
-    gl.texSubImage2D(GL.TEXTURE_2D, 0, 0, y, 256, 1, GL.LUMINANCE_ALPHA, GL.UNSIGNED_BYTE, _scanline);
+    gl.texSubImage2D(GL.TEXTURE_2D, 0, 0, y, 160, 1, GL.LUMINANCE_ALPHA, GL.UNSIGNED_BYTE, _scanline);
   }
   
   void present() {
