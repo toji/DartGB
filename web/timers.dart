@@ -73,7 +73,7 @@ class Timers {
       memory.IF |= 2;
     }
     if (memory.LCDC_displayOn) {
-      // TODO: display framebuffer.
+      // TODO: framebouffer to lcd.
     } else {
       // TODO: display blank screen?
     }
@@ -93,8 +93,10 @@ class Timers {
   void mode3() {
     if (memory.STAT_mode != 3) {
       memory.STAT_mode = 3;
-      if (memory.STAT_mode2) {
-        memory.IF |= 2;
+      if (memory.LCDC_displayOn) {
+        // TODO: draw scanline.
+      } else {
+        // TODO: clear scanline.
       }
     }
   }

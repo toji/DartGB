@@ -1,7 +1,18 @@
 part of dartgb;
 
 class Memory {
+  // Memory and the cartridge's ROM.
   Uint8List _mem = new Uint8List(0x10000);
+  Uint8List _rom = null;
+  int MBC1mode = 0;
+  int ROM_bankOffset = 0;
+  int ROM_banks = 0;
+  int RAM_banks = 0;
+  
+  // ROM type constants.
+  const int _ROM_ONLY = 0x00;
+  const int _ROM_MBC1 = 0x01;
+  
   int get P1 =>   _mem[0xFF00];
   int get SC =>   _mem[0xFF02];
   int get DIV =>  _mem[0xFF04];
@@ -39,6 +50,8 @@ class Memory {
     }
   }
   
+  int get ROM_cartType => _rom[0x147];
+  
   // These get updated by Timers.
   int set DIV(int v)  => _mem[0xFF04] = v;
   int set IF(int v)   => _mem[0xFF0F] = v;
@@ -57,7 +70,30 @@ class Memory {
   List<bool> updatedBackground = new List<bool>(2048);
   
   Memory(ROM rom) {
-    _mem.setRange(0, rom.data.length, rom.data);
+    _mem.setRange(0, 0x8000, rom.data);
+    _rom = new Uint8List.view(rom.data.buffer);
+    
+    var ROMbanks = [];
+    ROMbanks[0x00] = 2;
+    ROMbanks[0x01] = 4;
+    ROMbanks[0x02] = 8;
+    ROMbanks[0x03] = 16;
+    ROMbanks[0x04] = 32;
+    ROMbanks[0x05] = 64;
+    ROMbanks[0x06] = 128;
+    ROMbanks[0x52] = 72;
+    ROMbanks[0x53] = 80;
+    ROMbanks[0x54] = 96;
+    ROM_banks = ROMbanks[_rom[0x148]];
+    
+    var RAMbanks = [];
+    RAMbanks[0] = 0;
+    RAMbanks[1] = 1;
+    RAMbanks[2] = 2; // docs say 1?
+    RAMbanks[3] = 4;
+    RAMbanks[4] = 16;
+    RAM_banks = RAMbanks[_rom[0x149]];
+    
     W(0xFF00, 0xFF); // P1
     W(0xFF04, 0xAF); // DIV
     W(0xFF05, 0x00); // TIMA
@@ -96,7 +132,30 @@ class Memory {
   }
   
   int R(int addr) {
-    return _mem[addr]; 
+    if (ROM_cartType == _ROM_ONLY) {
+      return _mem[addr];
+    } else if (ROM_cartType == _ROM_MBC1) {
+      return readMBC1ROM(addr);
+    }
+  }
+  
+  int readMBC1ROM(int addr) {
+    switch (addr >> 12) {
+      case 0:
+      case 1:
+      case 2:
+      case 3: return _mem[addr];
+      case 4:
+      case 5:
+      case 6:
+      case 7: return _rom[ROM_bankOffset + addr];
+      default: return _mem[addr];
+    }
+  }
+  
+  void ROM_bankSwitch(int bank) {
+    // TODO: increment switch count
+    ROM_bankOffset = (bank == 0) ? 0 : (--bank * 0x4000);
   }
   
   void W(int addr, int val) {
@@ -163,7 +222,29 @@ class Memory {
     
     // Writing to ROM?
     else if (addr < 0x800) {
-      return; // TODO: support banked ROMs.
+      switch (ROM_cartType) {
+        case _ROM_ONLY: 
+          return;
+        case _ROM_MBC1:
+          switch (addr << 12) {
+            // Write to 2000-3FFF to select ROM bank.
+            case 2:
+            case 3:
+              ROM_bankSwitch(val & 31);
+            return;
+            case 6:
+            case 7:
+              MBC1mode = val & 1;
+              return;
+            // Unhandled cases.
+            default:
+              return;
+          }
+        default:
+          print("Unknown memory bank controller " 
+                "${addr.toRadixString(16)}, ${val.toRadixString(16)}");
+          return;
+      }
     }
     
     // Note updates to some locations.
