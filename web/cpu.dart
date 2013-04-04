@@ -651,6 +651,7 @@ class CPU {
     };
     // STOP
     op[0x10] = () {
+        gb.pause();
         print('STOP');
         assert(false);
         ticks = 4;
