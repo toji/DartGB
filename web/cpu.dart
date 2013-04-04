@@ -38,10 +38,10 @@ class CPU {
     if (gb.interrupts.halt)
       ticks = 4;
     else {
-      var pc = r['pc'];
-      var opCode = gb.memory.R(pc);
+      var opCode = gb.memory.R(r['pc']);
+      //print('PC ${r['pc'].toRadixString(16)}: ${opCode.toRadixString(16)}');
+      ++r['pc'];
       op[opCode]();
-      r['pc'] = ++pc;
     }
   }
 
@@ -243,7 +243,8 @@ class CPU {
 
   void JP(bool c) {
     if (c) {
-      r['pc'] = (gb.memory.R(r['pc'] + 1) << 8) | gb.memory.R(r['pc']);
+      var new_pc = (gb.memory.R(r['pc'] + 1) << 8) | gb.memory.R(r['pc']);
+      r['pc'] = new_pc;
     } else {
       r['pc'] += 2;
     }

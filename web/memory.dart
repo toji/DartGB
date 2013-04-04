@@ -96,7 +96,9 @@ class Memory {
   }
   
   int R(int addr) {
-    return _mem[addr]; 
+    int val = _mem[addr];
+    //print('  R ${addr.toRadixString(16)}: ${val.toRadixString(16)}');
+    return val;
   }
   
   void W(int addr, int val) {
