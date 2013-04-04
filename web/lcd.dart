@@ -243,6 +243,15 @@ class LCD {
     }
   }
   
+  void simpleDrawScanline() {
+    int i = 0;
+    int j = 0;
+    int k = 0;
+    int x = 0;
+    int y = 0;
+    int offset = memory.LY * 160; // framebuffer's offset.
+  }
+  
   void present(int ScrollX, int ScrollY) {
     blit(_background.texture, null, ScrollX, ScrollY, 0, 0, 512, 512);
   }
