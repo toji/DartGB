@@ -11,6 +11,9 @@ class LCD {
   
   ShaderHelper _blitShader;
   
+  List<List<List<int>>> tileData = null;
+  List<List<int>> backgroundData = null;
+  
   String _blitVS = """
     attribute vec2 Position;
     attribute vec2 TexCoord0;
@@ -44,6 +47,9 @@ class LCD {
   Float32Array _clipMat = new Float32Array(9);
 
   LCD(CanvasElement this._canvas, Memory this.memory) {
+    // Initializes a few useful data structures.
+    initLCD();
+    
     _canvas.width = (_canvas.clientWidth * window.devicePixelRatio).toInt();
     _canvas.height = (_canvas.clientHeight * window.devicePixelRatio).toInt();
     
@@ -74,7 +80,7 @@ class LCD {
     ]);
     
     gl.bufferData(GL.ARRAY_BUFFER, verts, GL.STATIC_DRAW);
-    
+  
     present(0, 0);
   }
   
@@ -116,6 +122,65 @@ class LCD {
     gl.uniform2f(_blitShader.uniforms["srcScale"], width, height);
     
     gl.drawArrays(GL.TRIANGLES, 0, 6);
+  }
+
+  void initLCD() {
+    // backgroundData is a big pixel map, 4 times the size of the 
+    // 256x256 screen.
+    backgroundData = new List<List<int>>(512);
+    for (var i = 0; i < 512; i++) {
+      backgroundData[i] = new List<int>(512);
+    }
+    
+    // tileData is an array of tiles, each of which is an array of 8
+    // lines, which each have 8 pixels.
+    tileData = new List<List<List<int>>>(384);
+    for (var i = 0; i < 384; i++) {
+      tileData[i] = new List<List<int>>(8);
+      for (var j = 0; j < 8; j++) {
+        tileData[i][j] = new List<int>(8);
+      }
+    }
+  }
+  
+  // Generally following the API used by jsgb.
+  void updateBackground() {
+    int tile0 = 0; // tile index for tiledata at 8000+(unsigned byte)
+    int tile1 = 1; // tile index for tiledata at 8800+(signed byte)
+    int addr = 0x9800; // for looping through the tile maps
+    
+    int col = 0;
+    int row = 0;
+    int z = 0; // Pixel within a single row
+    int rowOffset = 0; // row within a tile
+    List<int> tileline = null;
+    List<int> backline = null;
+    
+    for (int i = 0; i < 2048; i++) {
+      tile0 = memory.R(addr++);
+      tile1 = 256 + Util.signed(tile0);
+      if (memory.updatedTiles[i] || memory.updatedBackground[tile0]) {
+        rowOffset = 8;
+        while (row-- != 0) {
+          tileline = tileData[tile0][rowOffset]; // 8px long.
+          backline = backgroundData[row + rowOffset]; // 512px long.
+          backline.setRange(col, 8, tileline);
+        }
+      }
+      if (memory.updatedTiles[i] || memory.updatedBackground[tile1]) {
+        rowOffset = 8;
+        while (row-- != 0) {
+          tileline = tileData[tile1][rowOffset];
+          backline = backgroundData[row + rowOffset];
+          backline.setRange(256 + col, 8, tileline); // +256 => on the right
+        }
+      }
+      memory.updatedBackground[i] = false;
+      if ((col+= 8) >= 256) {
+        col = 0;
+        row += 8;
+      }
+    }
   }
   
   void present(int ScrollX, int ScrollY) {
