@@ -7,15 +7,12 @@ class LCD {
   Memory memory;
   
   RenderTarget _frontBuffer;
+  RenderTarget _background;
   TextureHelper _tiles;
-  TextureHelper _background;
   
   GL.Buffer _quadBuffer;
   
   ShaderHelper _blitShader;
-  
-  List<List<List<int>>> tileData = null;
-  List<List<int>> backgroundData = null;
   
   String _blitVS = """
     attribute vec2 Position;
@@ -54,10 +51,6 @@ class LCD {
 
   LCD(CanvasElement this._canvas, Memory this.memory) {
     // Initializes a few useful data structures.
-    initLCD();
-    
-    _tileColorBuffer = new Uint32Array.fromBuffer(_tileByteBuffer.buffer);
-    
     _canvas.width = (_canvas.clientWidth * window.devicePixelRatio).toInt();
     _canvas.height = (_canvas.clientHeight * window.devicePixelRatio).toInt();
     
@@ -67,12 +60,11 @@ class LCD {
     gl.clearColor(0.0, 0.0, 1.0, 1.0);
     gl.clear(GL.COLOR_BUFFER_BIT);
     gl.clearColor(0.0, 0.0, 0.0, 0.0);
-    //gl.pixelStorei(GL.UNPACK_FLIP_Y_WEBGL, 1);
     
     // Allocate the front buffer
     _frontBuffer = new RenderTarget(gl, 256, 256, true);
+    _background = new RenderTarget(gl, 512, 512, true);
     _tiles = new TextureHelper(gl, 24, 1024);
-    _background = new TextureHelper(gl, 512, 512);
     
     _blitShader = new ShaderHelper(gl, _blitVS, _blitFS);
     
@@ -95,42 +87,17 @@ class LCD {
       updateTile(i);
     }
     
-    blitTile(_frontBuffer, 0, 0, 0);
-    blitTile(_frontBuffer, 16, 8, 8);
-    blitTile(_frontBuffer, 32, 16, 16);
-    blitTile(_frontBuffer, 64, 32, 32);
-    blitTile(_frontBuffer, 128, 130, 130);
+    blitTile(_background, 0, 0, 0);
+    blitTile(_background, 16, 8, 8);
+    blitTile(_background, 32, 16, 16);
+    blitTile(_background, 64, 32, 32);
+    blitTile(_background, 128, 130, 130);
     
-    blit(_tiles, _frontBuffer, 0, 0, 0, 128, 24, 256);
+    blit(_tiles, _background, 0, 0, 0, 128, 24, 256);
     
-    blit(_tiles, null, 0, 0, 256, 0, 24, 1024); 
-    blit(_tiles, null, 8, 8, 280, 8, 8, 8);
+    blit(_tiles, null, 0, 0, 512, 0, 24, 1024); 
     
     present(64, 64);
-  }
-  
-  Uint8Array _tileByteBuffer = new Uint8Array(256 * 128);
-  Uint32Array _tileColorBuffer;
-  
-  void updateTile(int tileOffset) {
-    for(int i = 0; i < 256; i+=4) {
-      _tileByteBuffer[i] = (tileOffset % 256);
-      _tileByteBuffer[i+1] = (tileOffset % 256);
-      _tileByteBuffer[i+2] = (tileOffset % 256);
-      _tileByteBuffer[i+3] = 255;
-    }
-    
-    int tileX = 8 * (tileOffset / 128).toInt();
-    int tileY = 8 * (tileOffset % 128);
-    
-    gl.bindTexture(GL.TEXTURE_2D, _tiles.texture);
-    gl.texSubImage2D(GL.TEXTURE_2D, 0, tileX, tileY, 8, 8, GL.RGBA, GL.UNSIGNED_BYTE, _tileByteBuffer);
-  }
-  
-  void blitTile(RenderTarget target, int tileOffset, int x, int y) {
-    int tileX = 8 * (tileOffset / 128).toInt();
-    int tileY = 8 * (tileOffset % 128);
-    blit(_tiles, target, tileX, tileY, x, y, 8, 8);  
   }
   
   void blit(TextureHelper source, RenderTarget dest, int srcX, int srcY, int dstX, int dstY, int width, int height) {
@@ -179,24 +146,53 @@ class LCD {
     
     gl.drawArrays(GL.TRIANGLES, 0, 6);
   }
-
-  void initLCD() {   
-    // backgroundData is a big pixel map, 4 times the size of the 
-    // 256x256 screen.
-    backgroundData = new List<List<int>>(512);
-    for (var i = 0; i < 512; i++) {
-      backgroundData[i] = new List<int>(512);
-    }
-    
-    // tileData is an array of tiles, each of which is an array of 8
-    // lines, which each have 8 pixels.
-    tileData = new List<List<List<int>>>(384);
-    for (var i = 0; i < 384; i++) {
-      tileData[i] = new List<List<int>>(8);
-      for (var j = 0; j < 8; j++) {
-        tileData[i][j] = new List<int>(8);
+  
+  Uint8Array _tileByteBuffer = new Uint8Array(256);
+  
+  void updateTile(int tileOffset) {
+    int tileValue;
+    for(int i = 0; i < 256; i+=4) {
+      tileValue = tileOffset % 4; // TODO: get value from memory
+      
+      // These values should be looked up from a pallet at draw time
+      if(tileValue == 0) {
+        _tileByteBuffer[i] = 255;
+        _tileByteBuffer[i+1] = 255;
+        _tileByteBuffer[i+2] = 255;
+        _tileByteBuffer[i+3] = 0;
+      } else if(tileValue == 1) {
+        _tileByteBuffer[i] = 192;
+        _tileByteBuffer[i+1] = 192;
+        _tileByteBuffer[i+2] = 192;
+        _tileByteBuffer[i+3] = 255;
+      } else if(tileValue == 2) {
+        _tileByteBuffer[i] = 96;
+        _tileByteBuffer[i+1] = 96;
+        _tileByteBuffer[i+2] = 96;
+        _tileByteBuffer[i+3] = 255;
+      } else {
+        _tileByteBuffer[i] = 0;
+        _tileByteBuffer[i+1] = 0;
+        _tileByteBuffer[i+2] = 0;
+        _tileByteBuffer[i+3] = 255;
       }
     }
+    
+    int tileX = 8 * (tileOffset / 128).toInt();
+    int tileY = 8 * (tileOffset % 128);
+    
+    gl.bindTexture(GL.TEXTURE_2D, _tiles.texture);
+    gl.texSubImage2D(GL.TEXTURE_2D, 0, tileX, tileY, 8, 8, GL.RGBA, GL.UNSIGNED_BYTE, _tileByteBuffer);
+  }
+  
+  void blitTile(RenderTarget target, int tileIndex, int x, int y) {
+    int tileX = 8 * (tileIndex / 128).toInt();
+    int tileY = 8 * (tileIndex % 128);
+    blit(_tiles, target, tileX, tileY, x, y, 8, 8);  
+  }
+  
+  void blitBackgroundTile(int tileIndex, int backgroundIndex) {
+    blitTile(_background, tileIndex, (i % 64) * 8, (i / 64).toInt() * 8);
   }
   
   // Generally following the API used by jsgb.
@@ -212,24 +208,34 @@ class LCD {
     List<int> tileline = null;
     List<int> backline = null;
     
+    for (int i = 0; i < 384; i++) {
+      if(memory.updatedTiles[i]) {
+        updateTile(i);
+      }
+    }
+    
     for (int i = 0; i < 2048; i++) {
       tile0 = memory.R(addr++);
       tile1 = 256 + Util.signed(tile0);
-      if (memory.updatedTiles[i] || memory.updatedBackground[tile0]) {
-        rowOffset = 8;
+      
+      if (memory.updatedTiles[tile0] || memory.updatedBackground[i]) {
+        blitBackgroundTile(tile0, i); // TODO: Calculate tile x/y
+        /*rowOffset = 8;
         while (row-- != 0) {
           tileline = tileData[tile0][rowOffset]; // 8px long.
           backline = backgroundData[row + rowOffset]; // 512px long.
           backline.setRange(col, 8, tileline);
-        }
+        }*/
       }
-      if (memory.updatedTiles[i] || memory.updatedBackground[tile1]) {
-        rowOffset = 8;
+      if (memory.updatedTiles[tile1] || memory.updatedBackground[i]) {
+        blitBackgroundTile(tile1, i); // TODO: Calculate tile x/y
+        
+        /*rowOffset = 8;
         while (row-- != 0) {
           tileline = tileData[tile1][rowOffset];
           backline = backgroundData[row + rowOffset];
           backline.setRange(256 + col, 8, tileline); // +256 => on the right
-        }
+        }*/
       }
       memory.updatedBackground[i] = false;
       if ((col+= 8) >= 256) {
@@ -240,6 +246,6 @@ class LCD {
   }
   
   void present(int ScrollX, int ScrollY) {
-    blit(_frontBuffer.texture, null, ScrollX, ScrollY, 0, 0, 256, 256);
+    blit(_background.texture, null, ScrollX, ScrollY, 0, 0, 512, 512);
   }
 }
