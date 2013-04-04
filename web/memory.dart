@@ -8,9 +8,16 @@ class Memory {
   int get TIMA => _mem[0xFF05];
   int get TMA =>  _mem[0xFF06];
   int get TAC =>  _mem[0xFF07];
+  bool get TAC_timerOn => (TAC & 4) != 0;
   int get IF =>   _mem[0xFF0F];
   int get LCDC => _mem[0xFF40];
+  bool get LCDC_displayOn => (LCDC >> 7) != 0;
   int get STAT => _mem[0xFF41];
+  bool get STAT_LYLC =>  STAT & 64 != 0;
+  bool get STAT_mode0 => STAT & 32 != 0;
+  bool get STAT_mode1 => STAT & 16 != 0;
+  bool get STAT_mode2 => STAT & 8 != 0;
+  int get STAT_mode =>  STAT & 3;
   int get SCY =>  _mem[0xFF42];
   int get SCX =>  _mem[0xFF43];
   int get LY =>   _mem[0xFF44];
@@ -23,6 +30,22 @@ class Memory {
   int get WX =>   _mem[0xFF4B];
   int get IE =>   _mem[0xFFFF];
   
+  int get timerPeriod {
+    switch(TAC & 3) {
+      case 0: 1024;
+      case 1: 16;
+      case 2: 64;
+      case 3: 256;
+    }
+  }
+  
+  // These get updated by Timers.
+  int set DIV(int v)  => _mem[0xFF04] = v;
+  int set IF(int v)   => _mem[0xFF0F] = v;
+  int set STAT(int v) => _mem[0xFF41] = v;
+  int set LY(int v) =>   _mem[0xFF44] = v;
+  int set STAT_mode(int v) => _mem[0xFF41] = (STAT & 0xFC) | v;
+    
   List<int> BackPal = new List<int>(4);
   List<List<int>> SpritePal = [new List<int>(4), new List<int>(4)];
   
@@ -90,22 +113,12 @@ class Memory {
           // Resets divider clock.
           _mem[addr] = 0;
           return;
-        case 0x07:
-          // Controls clocks.
-          _mem[addr] = val;
-          // TODO: timer on = val & 4
-          // TODO: timer frequency = val & 3
-          return;
         case 0x0F:
           // Interrupt flags.
           _mem[addr] = val & 31;
           return;
         case 0x40:
-          // TODO: LCDC?
-          _mem[addr] = val;
-          return;
-        case 0x41:
-          // TODO: STAT?
+          // TODO: LCD control?
           _mem[addr] = val;
           return;
         case 0x44:
@@ -184,6 +197,15 @@ class Memory {
       else {
         _mem[addr] = val;
       }
+    }
+  }
+  
+  void setTimerFreq(int v) {
+    switch(v) {
+      case 0:
+      case 1:
+      case 2:
+      case 3:
     }
   }
 }
