@@ -1226,7 +1226,10 @@ class CPU {
         ticks = 16;
     };
     // AND u8
-    op[0xE6] = () { AND_A(gb.memory.R(r['pc']++), 8); };
+    op[0xE6] = () { 
+        r['t2'] = gb.memory.R(r['pc']);
+        AND_A('t2', 8);
+    };
     // RST 0x20
     op[0xE7] = () { RST(0x20); };
     // ADD SP,u8
